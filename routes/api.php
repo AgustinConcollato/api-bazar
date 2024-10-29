@@ -14,6 +14,6 @@ Route::get('/products', [ProductController::class, 'search']);
 Route::put('/products/{id}', [ProductController::class, 'update']);
 Route::post('/products', [ProductController::class, 'addProduct']);
 
-Route::get('/categories', [CategoriesController::class, 'allCategories']);
+Route::get('/categories', [CategoriesController::class, 'categories']);
 Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 

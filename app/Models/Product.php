@@ -17,16 +17,16 @@ class Product extends Model
         'description',
         'price',
         'discount',
-        'category_id', // Agrega esto
-        'subcategory', // Asegúrate de que este campo también esté aquí
-        'available_quantity', // Y este campo
+        'category_id',
+        'subcategory',
+        'available_quantity',
         'status',
         'creation_date',
         'code',
         'id',
         'images',
         'thumbnails',
-        // Agrega otros campos según sea necesario
+        'last_date_modified'
     ];
 
     public $timestamps = false;

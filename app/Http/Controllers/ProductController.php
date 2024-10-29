@@ -152,6 +152,6 @@ class ProductController
 
         $product->update($validatedData);
 
-        return response()->json([Config::get('api-responses.success.updated'), 'product' => $product]);
+        return response()->json(array_merge(Config::get('api-responses.success.updated'), ['product' => $product]));
     }
 }
