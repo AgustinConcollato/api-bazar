@@ -12,7 +12,8 @@ Route::middleware('web')->get('/csrf-token', function (Request $request) {
 Route::get('/products/{id}', [ProductController::class, 'detail']);
 Route::get('/products', [ProductController::class, 'search']);
 Route::put('/products/{id}', [ProductController::class, 'update']);
-Route::post('/products', [ProductController::class, 'addProduct']);
+Route::delete('/products/{id}', [ProductController::class, 'delete']);
+Route::post('/products', [ProductController::class, 'add']);
 
 Route::get('/categories', [CategoriesController::class, 'categories']);
 Route::get('/categories/{code}', [CategoriesController::class, 'category']);
