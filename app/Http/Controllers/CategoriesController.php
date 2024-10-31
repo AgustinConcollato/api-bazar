@@ -8,7 +8,9 @@ class CategoriesController
 {
     function categories()
     {
-        $categories = Categories::with('subcategories')->get();
+        $categories = Categories::with('subcategories')
+            ->withCount('products')
+            ->get();
 
         return response($categories);
     }
