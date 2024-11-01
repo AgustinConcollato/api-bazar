@@ -12,7 +12,7 @@ class FirebaseController
     public function __construct()
     {
         // Inicializa Firebase
-        $factory = (new Factory)->withServiceAccount('path/to/your/firebase_credentials.json');
+        $factory = (new Factory)->withServiceAccount(base_path('bazar-regalaria-firebase-adminsdk.json'));
         $this->auth = $factory->createAuth();
     }
 
@@ -25,13 +25,7 @@ class FirebaseController
             // Puedes formatear la respuesta según lo que necesites
             $userList = [];
             foreach ($users as $user) {
-                $userList[] = [
-                    'uid' => $user->uid,
-                    'email' => $user->email,
-                    'displayName' => $user->displayName,
-                    'photoUrl' => $user->photoUrl,
-                    'provider' => $user->providerData, // Información de proveedores
-                ];
+                $userList[] = [$user];
             }
 
             return response()->json($userList);
