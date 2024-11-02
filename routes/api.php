@@ -23,8 +23,6 @@ Route::post('/products', [ProductController::class, 'add']); // tiene que estar 
 Route::get('/categories', [CategoriesController::class, 'categories']);
 Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
-// Route::get('/firebase/users', [FirebaseController::class, 'getUsers']);
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/firebase/users', [FirebaseController::class, 'getUsers']);
     Route::post('/logout', [AuthController::class, 'logout']);
