@@ -27,4 +27,5 @@ Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/firebase/users', [FirebaseController::class, 'getUsers']);
+    Route::post('/logout', [AuthController::class, 'logout']);
 });
