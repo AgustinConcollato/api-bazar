@@ -16,21 +16,18 @@ class FirebaseController
         $this->auth = $factory->createAuth();
     }
 
-    public function getUsers(): JsonResponse
+    public function users(): JsonResponse
     {
         try {
-            // Obtiene la lista de usuarios
             $users = $this->auth->listUsers();
 
-            // Puedes formatear la respuesta según lo que necesites
             $userList = [];
             foreach ($users as $user) {
-                $userList[] = [$user];
+                $userList[] = $user;
             }
 
             return response()->json($userList);
         } catch (\Exception $e) {
-            // Manejo de errores
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

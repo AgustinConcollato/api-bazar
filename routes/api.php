@@ -3,8 +3,8 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\FirebaseController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->get('csrf-token', function () {
@@ -23,7 +23,11 @@ Route::post('/products', [ProductController::class, 'add']); // tiene que estar 
 Route::get('/categories', [CategoriesController::class, 'categories']);
 Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
+Route::post('/order', [OrderController::class, 'create']);
+
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/firebase/users', [FirebaseController::class, 'getUsers']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::get('/firebase/users', [FirebaseController::class, 'users']);
+
 });
