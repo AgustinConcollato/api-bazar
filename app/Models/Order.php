@@ -20,7 +20,8 @@ class Order extends Model
         'comment',
         'total_amount',
         'date',
-        'id'
+        'id',
+        'client_name'
     ];
     public $timestamps = false;
 

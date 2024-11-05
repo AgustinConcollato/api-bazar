@@ -16,7 +16,7 @@ class OrderController
 
         if ($existingOrder) {
             return response()->json([
-                'error' => ['message' => 'Ya existe un pedido pendiente para este cliente.'],
+                'error' => ['message' => 'Ya existe un pedido pendiente para este cliente'],
             ], 400);
         }
 
@@ -26,11 +26,51 @@ class OrderController
             'status' => 'required|string',
             'total_amount' => 'nullable|integer',
             'date' => 'required|integer',
-            'id' => 'required|string'
+            'id' => 'required|string',
+            'client_name' => 'required|string'
         ]);
 
         $order = Order::create($data);
 
         return response()->json([$order], 201);
+    }
+
+    public function pending($id = null)
+    {
+
+        if ($id) {
+            $orders = Order::where('status', 'pending')
+                ->where('client', $id)
+                ->orderBy('date', 'asc')
+                ->get();
+        } else {
+            $orders = Order::where('status', 'pending')
+                ->orderBy('date', 'asc')
+                ->get();
+        }
+
+        return response()->json($orders);
+    }
+
+    public function completed(Request $request, $id = null)
+    {
+
+        $currentMonthStart = $request->input('currentMonthStart');
+        $currentMonthEnd = $request->input('currentMonthEnd');
+
+        if ($id) {
+            $orders = Order::where('status', 'completed')
+                ->where('client', $id)
+                ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
+                ->orderBy('date', 'desc')
+                ->get();
+        } else {
+            $orders = Order::where('status', 'completed')
+                ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
+                ->orderBy('date', 'desc')
+                ->get();
+        }
+
+        return response()->json($orders);
     }
 }
