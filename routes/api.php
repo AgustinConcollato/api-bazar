@@ -27,6 +27,7 @@ Route::post('/order', [OrderController::class, 'create']);
 Route::get('/order/pending', [OrderController::class, 'pending']);
 Route::get('/order/pending/{id}', [OrderController::class, 'pending']);
 Route::get('/order/completed', [OrderController::class, 'completed']);
+Route::get('/order/{id}', [OrderController::class, 'products']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);

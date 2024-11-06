@@ -25,4 +25,11 @@ class Order extends Model
     ];
     public $timestamps = false;
 
+    // En el modelo Order.php
+    public function products()
+    {
+        return $this->hasMany(OrderProducts::class, 'order_id', 'id');
+    }
+
+
 }

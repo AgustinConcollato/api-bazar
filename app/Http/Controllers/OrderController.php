@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use Illuminate\Support\Facades\Config;
 use Symfony\Component\HttpFoundation\Request;
 
 class OrderController
@@ -72,5 +73,23 @@ class OrderController
         }
 
         return response()->json($orders);
+    }
+
+    public function products($id    )
+    {
+        $order = Order::with('products')->find($id);
+
+        if (!$order) {
+            return response()->json(Config::get('api-responses.error.not_found'), 404);
+        }
+
+        return response()->json($order);
+    }
+
+    public function update(Request $request)
+    {
+
+        $orderId = $request->input('order');
+
     }
 }
