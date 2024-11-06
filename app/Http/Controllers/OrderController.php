@@ -75,7 +75,7 @@ class OrderController
         return response()->json($orders);
     }
 
-    public function products($id    )
+    public function products($id)
     {
         $order = Order::with('products')->find($id);
 

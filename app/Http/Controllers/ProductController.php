@@ -120,13 +120,21 @@ class ProductController
     }
     public function search(Request $request)
     {
-
         $category = $request->input('category');
-
-        $products = Product::where('category_id', $category)
-            ->orderBy('name')
-            ->paginate(20);
-
+        $name = $request->input('name');
+    
+        $query = Product::query();
+    
+        if ($category) {
+            $query->where('category_id', $category);
+        }
+    
+        if ($name) {
+            $query->where('name', 'like', '%' . $name . '%');
+        }
+    
+        $products = $query->orderBy('name')->paginate(20);
+    
         return response()->json($products);
     }
     public function update(Request $request, $id)
@@ -153,7 +161,6 @@ class ProductController
 
         return response()->json(array_merge(Config::get('api-responses.success.updated'), ['product' => $product]));
     }
-
     public function updateImages(Request $request, $id)
     {
         $product = Product::find($id);
@@ -192,8 +199,6 @@ class ProductController
 
         return response()->json(['message' => 'Imagen actualizada con éxito', 'product' => $product]);
     }
-
-
     public function delete($id)
     {
         $product = Product::find($id);
