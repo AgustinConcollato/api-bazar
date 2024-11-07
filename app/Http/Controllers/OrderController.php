@@ -107,21 +107,15 @@ class OrderController
             ->first();
 
         if ($productInOrder) {
-            // Si ya existe, actualiza la cantidad y subtotal
-            $productInOrder->update([
-                'quantity' => $productInOrder->quantity + $data['quantity'],
-                'subtotal' => $productInOrder->subtotal + $subtotal
-            ]);
-        } else {
-            // Si no existe, crea un nuevo registro
-            $product = OrderProducts::create($data);
+            return response()->json(['message' => 'El producto ya esta en la lista'], 400);
         }
 
-        // Actualiza el total en la tabla `orders`
+        $product = OrderProducts::create($data);
+
         $order = Order::find($data['order_id']);
         $order->update(['total_amount' => $order->total_amount + $subtotal]);
 
-        return response()->json($productInOrder ?? $product, 201);
+        return response()->json($product, 201);
     }
 
     public function FunctionName()
