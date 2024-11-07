@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderProducts;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Config;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -86,6 +88,46 @@ class OrderController
         return response()->json($order);
     }
 
+    public function add(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string',
+            'price' => 'required|integer',
+            'order_id' => 'required|string',
+            'product_id' => 'required|string',
+            'picture' => 'nullable|string',
+            'quantity' => 'required|integer'
+        ]);
+
+        $subtotal = $request->input('price') * $request->input('quantity');
+        $data['subtotal'] = $subtotal;
+
+        $productInOrder = OrderProducts::where('order_id', $data['order_id'])
+            ->where('product_id', $data['product_id'])
+            ->first();
+
+        if ($productInOrder) {
+            // Si ya existe, actualiza la cantidad y subtotal
+            $productInOrder->update([
+                'quantity' => $productInOrder->quantity + $data['quantity'],
+                'subtotal' => $productInOrder->subtotal + $subtotal
+            ]);
+        } else {
+            // Si no existe, crea un nuevo registro
+            $product = OrderProducts::create($data);
+        }
+
+        // Actualiza el total en la tabla `orders`
+        $order = Order::find($data['order_id']);
+        $order->update(['total_amount' => $order->total_amount + $subtotal]);
+
+        return response()->json($productInOrder ?? $product, 201);
+    }
+
+    public function FunctionName()
+    {
+
+    }
     public function update(Request $request)
     {
 
