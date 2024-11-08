@@ -9,7 +9,7 @@ class OrderProducts extends Model
 {
     use HasFactory;
     protected $table = 'products_order';
-    protected $primaryKey = 'order_id';
+    protected $primaryKey = 'count';
     public $incrementing = false;
 
     protected $fillable = [
@@ -23,4 +23,8 @@ class OrderProducts extends Model
     ];
     public $timestamps = false;
 
+    public function order()
+    {
+        return $this->belongsTo(Order::class, 'order_id', 'id');
+    }
 }

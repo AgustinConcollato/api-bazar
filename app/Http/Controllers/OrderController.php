@@ -118,9 +118,28 @@ class OrderController
         return response()->json($product, 201);
     }
 
-    public function FunctionName()
+    public function remove(Request $request)
     {
 
+        $orderId = $request->input('orderId');
+        $productId = $request->input('productId');
+
+        $product = OrderProducts::where(['order_id' => $orderId])
+            ->where('product_id', $productId)
+            ->first();
+
+        if (!$product) {
+            return response()->json(Config::get('api-responses.error.not-found'), 404);
+        }
+
+        $order = Order::find($orderId);
+        if ($order) {
+            $order->update(['total_amount' => $order->total_amount - $product->subtotal]);
+        }
+        
+        $product->delete();
+
+        return response()->json($product);
     }
     public function update(Request $request)
     {

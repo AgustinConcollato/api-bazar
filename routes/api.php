@@ -24,7 +24,8 @@ Route::get('/categories', [CategoriesController::class, 'categories']);
 Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
 Route::post('/order', [OrderController::class, 'create']);
-Route::post('/order/add', [OrderController::class, 'add']);
+Route::post('/order/product/add', [OrderController::class, 'add']);
+Route::delete('/order/product/remove', [OrderController::class, 'remove']);
 Route::get('/order/pending', [OrderController::class, 'pending']);
 Route::get('/order/pending/{id}', [OrderController::class, 'pending']);
 Route::get('/order/completed', [OrderController::class, 'completed']);
