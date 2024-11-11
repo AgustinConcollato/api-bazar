@@ -136,10 +136,18 @@ class OrderController
         if ($order) {
             $order->update(['total_amount' => $order->total_amount - $product->subtotal]);
         }
-        
+
         $product->delete();
 
         return response()->json($product);
+    }
+
+    public function cancel($id)
+    {
+        $order = Order::find($id);
+        $order->delete();
+
+        return response()->json(Config::get('api-responses.success.deleted'));
     }
     public function update(Request $request)
     {
