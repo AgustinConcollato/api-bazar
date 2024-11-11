@@ -149,6 +149,15 @@ class OrderController
 
         return response()->json(Config::get('api-responses.success.deleted'));
     }
+
+    public function complete($id)
+    {
+        $order = Order::find($id);
+        $order->update(['status' => 'completed']);
+
+        return response()->json(Config::get('api-responses.success.default'));
+    }
+
     public function update(Request $request)
     {
 
