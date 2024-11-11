@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderProducts;
-use Illuminate\Http\JsonResponse;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Config;
+
 use Symfony\Component\HttpFoundation\Request;
 
 class OrderController
@@ -35,7 +36,7 @@ class OrderController
 
         $order = Order::create($data);
 
-        return response()->json([$order], 201);
+        return response()->json($order, 201);
     }
 
     public function pending($id = null)
@@ -156,6 +157,23 @@ class OrderController
         $order->update(['status' => 'completed']);
 
         return response()->json(Config::get('api-responses.success.default'));
+    }
+
+    public function pdf($id)
+    {
+        $order = Order::with('products')->find($id);
+
+        $data = [
+            'client' => ['name' => $order->client_name, 'id' => $order->client],
+            'code' => $order->id,
+            'date' => date('d/m/Y', ($order->date / 1000)),
+            'products' => $order->products,
+            'total' => $order->total_amount
+        ];
+
+        $pdf = pdf::loadView('remit', $data);
+
+        return $pdf->stream('Pedido de ' . $order->client_name . ' - ' . $order->client . '.pdf');
     }
 
     public function update(Request $request)

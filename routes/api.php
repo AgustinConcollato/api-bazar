@@ -25,6 +25,7 @@ Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
 Route::post('/order', [OrderController::class, 'create']);
 Route::post('/order/product/add', [OrderController::class, 'add']);
+Route::get('/order/pdf/{id}', [OrderController::class, 'pdf']);
 
 Route::put('/order/complete/{id}', [OrderController::class, 'complete']);
 
