@@ -15,7 +15,6 @@ return new class extends Migration
             $table->string('name', 100);
             $table->longText('picture');
             $table->integer('price');
-            $table->string('code', 25);
             $table->string('product_id', 25);
             $table->string('order_id', 25);
             $table->integer('quantity');

@@ -19,7 +19,6 @@ return new class extends Migration {
             $table->integer('total_amount');
             $table->bigInteger('date');
             $table->integer('count', true);
-            $table->unique(['client', 'status'], 'unique_pending_order_per_client')->where('status', 'pending');
         });
     }
     /**

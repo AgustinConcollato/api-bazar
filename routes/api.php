@@ -26,6 +26,8 @@ Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 Route::post('/order', [OrderController::class, 'create']);
 Route::post('/order/product/add', [OrderController::class, 'add']);
 
+Route::put('/order/complete/{id}', [OrderController::class, 'complete']);
+
 Route::delete('/order/product/remove', [OrderController::class, 'remove']);
 Route::delete('/order/cancel/{id}', [OrderController::class, 'cancel']);
 
