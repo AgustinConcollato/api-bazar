@@ -159,14 +159,16 @@ class OrderController
         return response()->json(Config::get('api-responses.success.default'));
     }
 
-    public function pdf($id)
+    public function pdf(Request $request, $id)
     {
+        $date = $request->input('date');
+        
         $order = Order::with('products')->find($id);
 
         $data = [
             'client' => ['name' => $order->client_name, 'id' => $order->client],
             'code' => $order->id,
-            'date' => date('d/m/Y', ($order->date / 1000)),
+            'date' => date('d/m/Y', ($date / 1000)),
             'products' => $order->products,
             'total' => $order->total_amount
         ];
