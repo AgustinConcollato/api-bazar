@@ -122,19 +122,21 @@ class ProductController
     {
         $category = $request->input('category');
         $name = $request->input('name');
-    
+
         $query = Product::query();
-    
-        if ($category) {
+
+        if ($name) {
+            if ($category) {
+                $query->where('category_id', $category);
+            }
+
+            $query->where('name', 'like', '%' . $name . '%');
+        } else {
             $query->where('category_id', $category);
         }
-    
-        if ($name) {
-            $query->where('name', 'like', '%' . $name . '%');
-        }
-    
+
         $products = $query->orderBy('name')->paginate(20);
-    
+
         return response()->json($products);
     }
     public function update(Request $request, $id)
