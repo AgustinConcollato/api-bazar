@@ -162,7 +162,7 @@ class OrderController
     public function pdf(Request $request, $id)
     {
         $date = $request->input('date');
-        
+
         $order = Order::with('products')->find($id);
 
         $data = [
@@ -180,8 +180,36 @@ class OrderController
 
     public function update(Request $request)
     {
+        $productId = $request->input('product_id');
+        $orderId = $request->input('order_id');
+        $name = $request->input('name');
+        $price = $request->input('price');
+        $quantity = $request->input('quantity');
 
-        $orderId = $request->input('order');
+        $product = OrderProducts::where(['product_id' => $productId])
+            ->where(['order_id' => $orderId])
+            ->first();
 
+        if (!$product) {
+            return response()->json(Config::get('api-responses.error.not-found'), 404);
+        }
+
+        $order = Order::find($orderId);
+
+        if ($order) {
+            $order->total_amount -= $product->subtotal;
+
+            $product->update([
+                'name' => $name,
+                'price' => $price,
+                'quantity' => $quantity,
+                'subtotal' => ($price * $quantity)
+            ]);
+
+            $order->total_amount += $product->subtotal;
+            $order->save();
+        }
+
+        return response()->json($product);
     }
 }

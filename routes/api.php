@@ -26,13 +26,10 @@ Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
 Route::post('/order', [OrderController::class, 'create']);
 Route::post('/order/product/add', [OrderController::class, 'add']);
-Route::get('/order/pdf/{id}', [OrderController::class, 'pdf']);
 
-Route::put('/order/complete/{id}', [OrderController::class, 'complete']);
-
-Route::delete('/order/product/remove', [OrderController::class, 'remove']);
 Route::delete('/order/cancel/{id}', [OrderController::class, 'cancel']);
 
+Route::get('/order/pdf/{id}', [OrderController::class, 'pdf']);
 Route::get('/order/pending', [OrderController::class, 'pending']);
 Route::get('/order/pending/{id}', [OrderController::class, 'pending']);
 Route::get('/order/completed', [OrderController::class, 'completed']);
@@ -43,8 +40,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/clients/{id}', [ClientController::class, 'get']);
     Route::get('/clients', [ClientController::class, 'get']);
+
     Route::post('/clients', [ClientController::class, 'add']);
 
     Route::get('/firebase/users', [FirebaseController::class, 'users']);
 
+    Route::put('/order/complete/{id}', [OrderController::class, 'complete']);
+    Route::put('/order/product', [OrderController::class, 'update']);
+
+    Route::delete('/order/product/remove', [OrderController::class, 'remove']);
 });
