@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoriesController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\FirebaseController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
@@ -39,6 +40,10 @@ Route::get('/order/{id}', [OrderController::class, 'products']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::get('/clients/{id}', [ClientController::class, 'get']);
+    Route::get('/clients', [ClientController::class, 'get']);
+    Route::post('/clients', [ClientController::class, 'add']);
 
     Route::get('/firebase/users', [FirebaseController::class, 'users']);
 
