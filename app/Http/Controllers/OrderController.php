@@ -175,7 +175,8 @@ class OrderController
 
         $pdf = pdf::loadView('remit', $data);
 
-        return $pdf->stream('Pedido de ' . $order->client_name . ' - ' . $order->client . '.pdf');
+        return response($pdf->output(), 200)
+            ->header('Content-Type', 'application/pdf');
     }
 
     public function update(Request $request)
