@@ -121,6 +121,7 @@ class ProductController
     public function search(Request $request)
     {
         $category = $request->input('category');
+        $subcategory = $request->input('subcategory');
         $name = $request->input('name');
 
         $query = Product::query();
@@ -133,6 +134,10 @@ class ProductController
             $query->where('name', 'like', '%' . $name . '%');
         } else {
             $query->where('category_id', $category);
+
+            if ($subcategory) {
+                $query->where('subcategory', 'like', '%' . $subcategory . '%');
+            }
         }
 
         $products = $query->orderBy('name')->paginate(20);
