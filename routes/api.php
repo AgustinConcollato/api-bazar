@@ -17,10 +17,6 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/products/{id}', [ProductController::class, 'detail']);
 Route::get('/products', [ProductController::class, 'search']);
 
-Route::put('/products/{id}', [ProductController::class, 'update']); // tiene que estar en auth
-Route::delete('/products/{id}', [ProductController::class, 'delete']); // tiene que estar en auth
-Route::post('/products', [ProductController::class, 'add']); // tiene que estar en auth
-
 Route::get('/categories', [CategoriesController::class, 'categories']);
 Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
@@ -37,16 +33,20 @@ Route::get('/order/{id}', [OrderController::class, 'products']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-
+    
     Route::get('/clients/{id}', [ClientController::class, 'get']);
     Route::get('/clients', [ClientController::class, 'get']);
-
+    
     Route::post('/clients', [ClientController::class, 'add']);
-
+    
     Route::get('/firebase/users', [FirebaseController::class, 'users']);
-
+    
     Route::put('/order/complete/{id}', [OrderController::class, 'complete']);
     Route::put('/order/product', [OrderController::class, 'update']);
-
+    
     Route::delete('/order/product/remove', [OrderController::class, 'remove']);
+    
+    Route::post('/products', [ProductController::class, 'add']);
+    Route::put('/products/{id}', [ProductController::class, 'update']);
+    Route::delete('/products/{id}', [ProductController::class, 'delete']);
 });
