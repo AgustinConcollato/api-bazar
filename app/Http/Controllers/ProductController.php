@@ -123,21 +123,24 @@ class ProductController
         $category = $request->input('category');
         $subcategory = $request->input('subcategory');
         $name = $request->input('name');
+        $panel = $request->input('panel');
 
         $query = Product::query();
 
-        if ($name) {
-            if ($category) {
-                $query->where('category_id', $category);
-            }
-
-            $query->where('name', 'like', '%' . $name . '%');
-        } else {
+        if ($category) {
             $query->where('category_id', $category);
+        }
 
-            if ($subcategory) {
-                $query->where('subcategory', 'like', '%' . $subcategory . '%');
-            }
+        if ($name) {
+            $query->where('name', 'like', '%' . $name . '%');
+        }
+
+        if ($subcategory) {
+            $query->where('subcategory', 'like', '%' . $subcategory . '%');
+        }
+
+        if (!$panel) {
+            $query->where('status', 'active');
         }
 
         $products = $query->orderBy('name')->paginate(20);
