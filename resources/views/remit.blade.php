@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Pedido de {{$client['name']}} - {{$client['id']}} </title>
+    <title>Pedido de {{$client['name']}} - {{$code}} </title>
 </head>
 <style>
     * {
