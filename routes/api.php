@@ -9,9 +9,6 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShoppingCartController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('web')->get('csrf-token', function () {
-    return response()->json(['token' => csrf_token()]);
-});
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
