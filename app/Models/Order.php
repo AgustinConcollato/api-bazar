@@ -18,6 +18,7 @@ class Order extends Model
         'client',
         'status',
         'comment',
+        'discount',
         'total_amount',
         'date',
         'id',
