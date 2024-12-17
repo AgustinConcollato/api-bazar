@@ -17,6 +17,7 @@ class OrderProducts extends Model
         'picture',
         'price',
         'product_id',
+        'discount',
         'order_id',
         'quantity',
         'subtotal',

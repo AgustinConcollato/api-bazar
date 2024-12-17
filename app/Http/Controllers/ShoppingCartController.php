@@ -89,28 +89,39 @@ class ShoppingCartController
         $order = Order::create([
             'client' => $userId,
             'client_name' => $userName,
-            'status' => 'pending', 
-            'total_amount' => 0, 
+            'status' => 'pending',
+            'total_amount' => 0,
             'date' => $date,
             'comment' => $comment,
             'id' => $id
         ]);
 
         foreach ($cartItems as $item) {
-            $product = Product::find($item->product_id); 
+            $product = Product::find($item->product_id);
 
             if (!$product) {
                 return response()->json(['message' => "El producto con ID {$item->product_id} no existe"], 404);
             }
+
+
+            if ($product->discount) {
+                $discount = $product->discount;
+                $subtotal = $item->quantity * ($product->price - ($product->price * $discount) / 100);
+            } else {
+                $discount = 0;
+                $subtotal = $item->quantity * $product->price;
+            }
+
 
             OrderProducts::create([
                 'order_id' => $id,
                 'product_id' => $item->product_id,
                 'quantity' => $item->quantity,
                 'price' => $product->price,
+                'discount' => $discount,
                 'name' => $product->name,
                 'picture' => $product->images,
-                'subtotal' => $item->quantity * $product->price,
+                'subtotal' => $subtotal,
             ]);
 
             $order->update(['total_amount' => OrderProducts::where('order_id', $id)->sum('subtotal')]);

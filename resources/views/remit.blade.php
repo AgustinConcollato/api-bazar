@@ -58,20 +58,18 @@
         text-align: right;
     }
 
-    .total {
-        margin-top: 20px;
-        padding-top: 10px;
-        display: flex;
+    .detail {
         border-top: 1px solid #000;
+        margin-top: 20px;
+        display: flex;
         text-align: right;
+        padding-top: 10px;
     }
 
-    .total span {
-        padding: 10px 15px;
-        display: inline-block;
-        border: 1px solid #000;
-        position: relative;
-        top: 15px;
+    .total {
+        padding-top: 10px;
+        display: flex;
+        text-align: right;
     }
 </style>
 
@@ -89,6 +87,7 @@
                 <th>CANTIDAD</th>
                 <th>PRODUCTO</th>
                 <th class="price">P/UNIDAD</th>
+                <th class="price">DESC</th>
                 <th class="price">SUBTOTAL</th>
             </tr>
         </thead>
@@ -98,12 +97,17 @@
                     <td>{{ $product['quantity'] }}</td>
                     <td>{{ $product['name'] }}</td>
                     <td class="price">$ {{ $product['price'] }}</td>
-                    <td class="price">$ {{ $product['subtotal'] }}</td>
+                    <td class="price">{{ $product['discount'] ? $product['discount'] : 0 }}%</td>
+                    <td class="price">$ {{ $product['subtotal'] }}
+                    </td>
                 </tr>
             @endforeach
         </tbody>
     </table>
-    <p class="total"><span>PRECIO TOTAL: $ {{$total}} </span></p>
+    <div class="detail">
+        <p>{{$discount ? 'Descuento:  ' . $discount . '%' : ''}} </p>
+        <p class="total">PRECIO TOTAL: $ {{$discount ? $total - ($discount * $total) / 100 : $total}}</p>
+    </div>
 </body>
 
 </html>

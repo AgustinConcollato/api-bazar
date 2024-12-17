@@ -28,7 +28,7 @@ class OrderController
             'client' => 'required|string',
             'comment' => 'nullable|string',
             'status' => 'required|string',
-            'total_amount' => 'nullable|integer',
+            'total_amount' => 'nullable|numeric',
             'date' => 'required|integer',
             'id' => 'required|string',
             'client_name' => 'required|string'
@@ -93,14 +93,22 @@ class OrderController
     {
         $data = $request->validate([
             'name' => 'required|string',
-            'price' => 'required|integer',
+            'price' => 'required|numeric',
             'order_id' => 'required|string',
             'product_id' => 'required|string',
             'picture' => 'nullable|string',
-            'quantity' => 'required|integer'
+            'quantity' => 'required|integer',
+            'discount' => 'nullable|integer'
         ]);
 
-        $subtotal = $request->input('price') * $request->input('quantity');
+        $price = $request->input('price');
+        $quantity = $request->input('quantity');
+        $discount = $request->input('discount');
+
+        $subtotal = $discount ?
+            ($price - ($price * $discount) / 100) * $quantity :
+            $price * $quantity;
+
         $data['subtotal'] = $subtotal;
 
         $productInOrder = OrderProducts::where('order_id', $data['order_id'])
@@ -170,6 +178,7 @@ class OrderController
             'code' => $order->id,
             'date' => date('d/m/Y', ($date / 1000)),
             'products' => $order->products,
+            'discount' => $order->discount,
             'total' => $order->total_amount
         ];
 
@@ -200,11 +209,17 @@ class OrderController
         if ($order) {
             $order->total_amount -= $product->subtotal;
 
+            $discount = $product->discount;
+
+            $subtotal = $discount ?
+                ($price - ($discount * $price) / 100) * $quantity :
+                $price * $quantity;
+
             $product->update([
                 'name' => $name,
                 'price' => $price,
                 'quantity' => $quantity,
-                'subtotal' => ($price * $quantity)
+                'subtotal' => $subtotal
             ]);
 
             $order->total_amount += $product->subtotal;
