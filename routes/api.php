@@ -7,6 +7,7 @@ use App\Http\Controllers\FirebaseController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShoppingCartController;
+use App\Http\Controllers\UserAddressController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -37,6 +38,10 @@ Route::get('/cart/{id}', [ShoppingCartController::class, 'get']);
 Route::put('/cart', [ShoppingCartController::class, 'update']);
 
 Route::delete('/cart/{user}/{id}', [ShoppingCartController::class, 'delete']);
+
+Route::get('/user/{userId}', [UserAddressController::class, 'get']);
+Route::post('/user', [UserAddressController::class, 'add']);
+Route::put('/user/{userId}', [UserAddressController::class, 'update']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
