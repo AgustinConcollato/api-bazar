@@ -22,6 +22,7 @@ class Order extends Model
         'total_amount',
         'date',
         'id',
+        'address',
         'client_name'
     ];
     public $timestamps = false;
