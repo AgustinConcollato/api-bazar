@@ -79,6 +79,7 @@ class ShoppingCartController
         $userName = $request->input('user_name');
         $date = $request->input('date');
         $comment = $request->input('comment');
+        $address = $request->input('address');
 
         $cartItems = ShoppingCart::where('user_id', $userId)->get();
 
@@ -93,7 +94,8 @@ class ShoppingCartController
             'total_amount' => 0,
             'date' => $date,
             'comment' => $comment,
-            'id' => $id
+            'id' => $id,
+            'address' => json_encode($address)
         ]);
 
         foreach ($cartItems as $item) {
