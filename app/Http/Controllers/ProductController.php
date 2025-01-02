@@ -38,6 +38,15 @@ function createThumbnail($sourcePath, $destPath, $maxWidth, $maxHeight)
     // Crear una imagen en blanco para la miniatura
     $thumbnail = imagecreatetruecolor($newWidth, $newHeight);
 
+    // Manejar transparencia para PNG
+    if ($type == IMAGETYPE_PNG) {
+        // Habilitar la mezcla alfa y configurar el fondo transparente
+        imagealphablending($thumbnail, false);
+        imagesavealpha($thumbnail, true);
+        $transparentColor = imagecolorallocatealpha($thumbnail, 0, 0, 0, 127);
+        imagefilledrectangle($thumbnail, 0, 0, $newWidth, $newHeight, $transparentColor);
+    }
+
     // Copiar y redimensionar la imagen original en la miniatura
     imagecopyresampled($thumbnail, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $sourceWidth, $sourceHeight);
 
