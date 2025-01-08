@@ -41,6 +41,14 @@ class ShoppingCartController
             ->with('product')
             ->get();
 
+        $shoppingCart = $shoppingCart->filter(function ($item) {
+            if ($item->product === null) {
+                $item->delete();
+                return false;
+            }
+            return true;
+        });
+
         return response()->json($shoppingCart);
     }
 
