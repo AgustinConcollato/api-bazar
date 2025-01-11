@@ -218,6 +218,38 @@ class ProductController
 
         return response()->json(['message' => 'Imagen actualizada con éxito', 'product' => $product]);
     }
+    public function addImage(Request $request, $id)
+    {
+        $validatedData = $request->validate([
+            'new_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        $product = Product::find($id);
+
+        if (!$product) {
+            return response()->json(Config::get('api-responses.error.not_found'), 404);
+        }
+
+        // Decodifica las imágenes almacenadas como JSON
+        $images = json_decode($product->images, true);
+        $thumbnails = json_decode($product->thumbnails, true);
+
+        // Almacena la nueva imagen
+        $newImagePath = $validatedData['new_image']->store('images/products', 'public');
+        $images[] = $newImagePath;
+
+        // Crea una miniatura de la nueva imagen
+        $newThumbnailPath = 'images/min/products/' . basename($newImagePath);
+        createThumbnail($validatedData['new_image']->getRealPath(), public_path('storage/' . $newThumbnailPath), 150, 150);
+        $thumbnails[] = $newThumbnailPath;
+
+        // Actualiza el producto con las nuevas rutas de imagen y miniatura
+        $product->images = json_encode($images);
+        $product->thumbnails = json_encode($thumbnails);
+        $product->save();
+
+        return response()->json(['message' => 'Imagen agregada con éxito', 'product' => $product]);
+    }
     public function delete($id)
     {
         $product = Product::find($id);

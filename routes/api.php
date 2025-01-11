@@ -60,5 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/products', [ProductController::class, 'add']);
     Route::put('/products/{id}', [ProductController::class, 'update']);
+    Route::post('/products/image-update/{id}', [ProductController::class, 'updateImages']);
+    Route::post('/products/image-add/{id}', [ProductController::class, 'addImage']);
     Route::delete('/products/{id}', [ProductController::class, 'delete']);
 });
