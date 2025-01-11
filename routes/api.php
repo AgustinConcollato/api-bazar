@@ -59,8 +59,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/order/product/remove', [OrderController::class, 'remove']);
 
     Route::post('/products', [ProductController::class, 'add']);
-    Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::post('/products/image-update/{id}', [ProductController::class, 'updateImages']);
     Route::post('/products/image-add/{id}', [ProductController::class, 'addImage']);
+    
+    Route::put('/products/{id}', [ProductController::class, 'update']);
+    
+    Route::delete('/products/image-delete/{id}', [ProductController::class, 'deleteImage']);
     Route::delete('/products/{id}', [ProductController::class, 'delete']);
 });
