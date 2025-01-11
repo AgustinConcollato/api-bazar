@@ -189,7 +189,7 @@ class ProductController
         }
 
         $validatedData = $request->validate([
-            'index' => 'required|integer', // Índice de la imagen a reemplazar
+            'index' => 'required|integer',
             'new_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
@@ -234,6 +234,10 @@ class ProductController
         $images = json_decode($product->images, true);
         $thumbnails = json_decode($product->thumbnails, true);
 
+        if (count($images) >= 5) {
+            return response()->json(['error' => 'No se pueden agregar más de 5 imágenes'], 400);
+        }
+
         // Almacena la nueva imagen
         $newImagePath = $validatedData['new_image']->store('images/products', 'public');
         $images[] = $newImagePath;
@@ -249,6 +253,44 @@ class ProductController
         $product->save();
 
         return response()->json(['message' => 'Imagen agregada con éxito', 'product' => $product]);
+    }
+    public function deleteImage(Request $request, $id)
+    {
+        $validatedData = $request->validate([
+            'index' => 'required|integer'
+        ]);
+
+        $product = Product::find($id);
+
+        if (!$product) {
+            return response()->json(Config::get('api-responses.error.not_found'), 404);
+        }
+
+        // Decodifica las imágenes almacenadas como JSON
+        $images = json_decode($product->images, true);
+        $thumbnails = json_decode($product->thumbnails, true);
+
+        // Verifica si el índice es válido
+        if (!isset($images[$validatedData['index']])) {
+            return response()->json(['error' => 'El índice de la imagen no existe'], 400);
+        }
+
+        // tengo que eliminar la imagen que se encuentra en el índice
+        $imagePath = $images[$validatedData['index']];
+        $thumbnailPath = $thumbnails[$validatedData['index']];
+        Storage::disk('public')->delete($imagePath);
+        Storage::disk('public')->delete($thumbnailPath);
+
+        // Elimina la imagen y la miniatura del arreglo
+        unset($images[$validatedData['index']]);
+        unset($thumbnails[$validatedData['index']]);
+
+        // Actualiza el producto con las nuevas rutas de imagen y miniatura
+        $product->images = json_encode(array_values($images));
+        $product->thumbnails = json_encode(array_values($thumbnails));
+        $product->save();
+
+        return response()->json(['message' => 'Imagen eliminada con éxito', 'product' => $product]);
     }
     public function delete($id)
     {
