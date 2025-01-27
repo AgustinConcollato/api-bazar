@@ -80,13 +80,31 @@ class ProductController
             'last_date_modified' => 'integer|nullable',
             'name' => 'required|string|max:255',
             'description' => 'string|nullable',
-            'code' => 'required|string',
+            'code' => 'string|nullable',
             'id' => 'required|string',
             'price' => 'required|numeric',
             'discount' => 'integer|nullable',
             'images' => 'required|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp,svg|max:2048'
         ]);
+
+        $categoryId = $validatedData['category_id'];
+
+        $prefix = substr($categoryId, -3);
+
+        $latestProduct = Product::where('category_id', $categoryId)
+            ->orderBy('code', 'desc')
+            ->first();
+
+        if ($latestProduct) {
+            $latestCodeNumber = (int) substr($latestProduct->code, 3);
+            $newCodeNumber = $latestCodeNumber + 1;
+        } else {
+            $newCodeNumber = 1;
+        }
+
+        $newCode = substr($prefix, -2) . str_pad($newCodeNumber, 3, '0', STR_PAD_LEFT);
+        $validatedData['code'] = $newCode;
 
         $imagePaths = [];
         $thumbnailPaths = [];
@@ -133,6 +151,7 @@ class ProductController
         $subcategory = $request->input('subcategory');
         $name = $request->input('name');
         $panel = $request->input('panel');
+        $date = $request->input('date');
 
         $query = Product::query();
 
@@ -150,6 +169,10 @@ class ProductController
 
         if (!$panel) {
             $query->where('status', 'active');
+        }
+
+        if ($date) {
+            $query->where('creation_date', '>=', $date);
         }
 
         $products = $query->orderBy('name')->paginate(20);
