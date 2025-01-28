@@ -152,6 +152,7 @@ class ProductController
         $name = $request->input('name');
         $panel = $request->input('panel');
         $date = $request->input('date');
+        $views = $request->input('views');
 
         $query = Product::query();
 
@@ -173,6 +174,18 @@ class ProductController
 
         if ($date) {
             $query->where('creation_date', '>=', $date);
+
+            $products = $query->orderBy('name')->paginate(10);
+
+            return response()->json($products);
+        }
+
+        if ($views) {
+            $query->get();
+
+            $products = $query->orderBy('views', 'desc')->paginate(10);
+
+            return response()->json($products);
         }
 
         $products = $query->orderBy('name')->paginate(20);
