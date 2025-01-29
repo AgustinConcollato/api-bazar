@@ -178,7 +178,7 @@ class ProductController
         if ($date) {
             $query->where('creation_date', '>=', $date);
 
-            $products = $query->orderBy('name')->paginate(10);
+            $products = $query->orderBy('creation_date', 'desc')->paginate(10);
 
             return response()->json($products);
         }
