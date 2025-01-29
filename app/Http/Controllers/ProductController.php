@@ -143,6 +143,9 @@ class ProductController
             return response()->json(Config::get('api-responses.error.not_found'), 404);
         }
 
+        $product->views += 1;
+        $product->save();
+
         return response()->json(array_merge(Config::get('api-responses.success.default'), ['product' => $product]));
     }
     public function search(Request $request)
