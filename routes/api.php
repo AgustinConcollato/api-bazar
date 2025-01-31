@@ -29,6 +29,7 @@ Route::get('/order/pending', [OrderController::class, 'pending']);
 Route::get('/order/pending/{id}', [OrderController::class, 'pending']);
 Route::get('/order/completed', [OrderController::class, 'completed']);
 Route::get('/order/{id}', [OrderController::class, 'products']);
+Route::get('/order/user/{userId}', [OrderController::class, 'get']);
 
 Route::post('/cart', [ShoppingCartController::class, 'add']);
 Route::post('/cart/confirm', [ShoppingCartController::class, 'confirm']);
