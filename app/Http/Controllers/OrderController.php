@@ -78,6 +78,13 @@ class OrderController
         return response()->json($orders);
     }
 
+    public function get($userId)
+    {
+        $orders = Order::where('client', $userId)->get();
+
+        return response()->json($orders);
+    }
+
     public function products($id)
     {
         $order = Order::with('products')->find($id);
