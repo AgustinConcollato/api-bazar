@@ -80,7 +80,9 @@ class OrderController
 
     public function get($userId)
     {
-        $orders = Order::where('client', $userId)->get();
+        $orders = Order::where('client', $userId)
+            ->orderBy('date', 'desc')
+            ->get();
 
         return response()->json($orders);
     }
