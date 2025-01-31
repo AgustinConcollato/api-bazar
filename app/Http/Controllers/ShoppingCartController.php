@@ -130,7 +130,7 @@ class ShoppingCartController
                 'price' => $product->price,
                 'discount' => $discount,
                 'name' => $product->name,
-                'picture' => $product->images,
+                'picture' => $product->thumbnails,
                 'subtotal' => $subtotal,
             ]);
 
