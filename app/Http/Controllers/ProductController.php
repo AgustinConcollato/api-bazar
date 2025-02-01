@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Models\Categories;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
@@ -90,20 +91,32 @@ class ProductController
 
         $categoryId = $validatedData['category_id'];
 
-        $prefix = substr($categoryId, -3);
+        // Obtener el código de la categoría desde la tabla categories
+        $category = Categories::where('category_code', $categoryId)->first();
+        if (!$category) {
+            throw new \Exception("Categoría no encontrada");
+        }
 
+        // Extraer el número del código de la categoría (últimos dígitos)
+        $categoryNumber = (int) substr($category->category_code, -3);
+
+        // Obtener el producto con el código más alto en la misma categoría
         $latestProduct = Product::where('category_id', $categoryId)
             ->orderBy('code', 'desc')
             ->first();
 
         if ($latestProduct) {
-            $latestCodeNumber = (int) substr($latestProduct->code, 3);
-            $newCodeNumber = $latestCodeNumber + 1;
+            // Extraer la parte AAA del código (los últimos 3 dígitos)
+            $latestCodeNumber = (int) substr($latestProduct->code, -3);
+            $newProductNumber = $latestCodeNumber + 1;
         } else {
-            $newCodeNumber = 1;
+            // Si no hay productos en la categoría, empezar en 001
+            $newProductNumber = 1;
         }
 
-        $newCode = substr($prefix, -2) . str_pad($newCodeNumber, 3, '0', STR_PAD_LEFT);
+        // Construir el código del producto (ejemplo: 012001)
+        $newCode = "0" . $categoryNumber . str_pad($newProductNumber, 3, '0', STR_PAD_LEFT);
+
         $validatedData['code'] = $newCode;
 
         $imagePaths = [];
