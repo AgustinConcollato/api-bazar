@@ -59,6 +59,9 @@ class ProductController
             return response()->json(Config::get('api-responses.error.not_found'), 404);
         }
 
+        $providers = $this->providerService->getProvidersByProduct($id);
+
+        $product['providers'] = $providers;
         // $product->views += 1;
         // $product->save();
 
