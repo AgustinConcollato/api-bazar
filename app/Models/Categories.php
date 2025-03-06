@@ -10,11 +10,11 @@ class Categories extends Model
 
     public function subcategories()
     {
-        return $this->hasMany(Subcategories::class, 'category_code', 'category_code');
+        return $this->hasMany(Subcategories::class, 'category_code', 'code');
     }
 
     public function products()
     {
-        return $this->hasMany(Product::class, 'category_id', 'category_code');
+        return $this->hasMany(Product::class, 'category_code', 'code');
     }
 }

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,20 +13,18 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->string('name', 100);
             $table->string('description', 500)->nullable();
-            $table->string('category_id', 80);
-            $table->string('subcategory', 80)->nullable();
-            $table->integer('available_quantity')->nullable();
-            $table->string('code', 25)->unique('code');
-            $table->string('id', 25);
-            $table->decimal('price', 9, 0);
+            $table->string('category_code', 80);
+            $table->string('subcategory_code', 80)->nullable();
+            $table->integer('available_quantity');
+            $table->string('code', 25)->unique();
+            $table->uuid('id')->primary();
+            $table->decimal('price', 11, 2);
             $table->integer('discount')->nullable();
-            $table->string('status', 9);
+            $table->enum('status', ['active', 'inactive'])->default('active');
             $table->string('images', 500);
             $table->string('thumbnails', 500);
             $table->integer('views')->default(0);
-            $table->integer('count', true);
-            $table->bigInteger('last_date_modified')->default(0);
-            $table->bigInteger('creation_date');
+            $table->timestamps();
 
             $table->unique(['id', 'code'], 'unique_product');
         });

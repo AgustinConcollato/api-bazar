@@ -4,22 +4,22 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
         Schema::create('products_order', function (Blueprint $table) {
+            $table->bigInteger('id');
             $table->string('name', 100);
             $table->longText('picture');
-            $table->integer('price');
-            $table->string('product_id', 25);
-            $table->string('order_id', 25);
+            $table->decimal('price', 11);
+            $table->uuid('product_id');
+            $table->uuid('order_id');
             $table->integer('quantity');
-            $table->integer('subtotal');
-            $table->integer('count', true);
+            $table->integer('discount')->nullable();
+            $table->decimal('subtotal', 11);
         });
     }
 

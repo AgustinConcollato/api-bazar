@@ -1,152 +1,55 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\Categories;
 use App\Models\Product;
+use App\Services\ProductService;
+use App\Services\ProviderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
-
-function createThumbnail($sourcePath, $destPath, $maxWidth, $maxHeight)
-{
-    // Cargar la imagen
-    list($sourceWidth, $sourceHeight, $type) = getimagesize($sourcePath);
-
-    // Crear la imagen según el tipo
-    switch ($type) {
-        case IMAGETYPE_JPEG:
-            $sourceImage = imagecreatefromjpeg($sourcePath);
-            break;
-        case IMAGETYPE_PNG:
-            $sourceImage = imagecreatefrompng($sourcePath);
-            break;
-        case IMAGETYPE_WEBP:
-            $sourceImage = imagecreatefromwebp($sourcePath);
-            break;
-        default:
-            break;
-    }
-
-    $aspectRatio = $sourceWidth / $sourceHeight;
-    if ($maxWidth / $maxHeight > $aspectRatio) {
-        $newWidth = (int) ($maxHeight * $aspectRatio);
-        $newHeight = $maxHeight;
-    } else {
-        $newWidth = $maxWidth;
-        $newHeight = (int) ($maxWidth / $aspectRatio);
-    }
-
-    // Crear una imagen en blanco para la miniatura
-    $thumbnail = imagecreatetruecolor($newWidth, $newHeight);
-
-    // Manejar transparencia para PNG
-    if ($type == IMAGETYPE_PNG) {
-        // Habilitar la mezcla alfa y configurar el fondo transparente
-        imagealphablending($thumbnail, false);
-        imagesavealpha($thumbnail, true);
-        $transparentColor = imagecolorallocatealpha($thumbnail, 0, 0, 0, 127);
-        imagefilledrectangle($thumbnail, 0, 0, $newWidth, $newHeight, $transparentColor);
-    }
-
-    // Copiar y redimensionar la imagen original en la miniatura
-    imagecopyresampled($thumbnail, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $sourceWidth, $sourceHeight);
-
-    // guardar segun el tipo
-    switch ($type) {
-        case IMAGETYPE_JPEG:
-            imagejpeg($thumbnail, $destPath);
-            break;
-        case IMAGETYPE_PNG:
-            imagepng($thumbnail, $destPath);
-            break;
-        case IMAGETYPE_WEBP:
-            imagewebp($thumbnail, $destPath);
-            break;
-    }
-
-    // Liberar memoria
-    imagedestroy($sourceImage);
-    imagedestroy($thumbnail);
-}
+use Illuminate\Validation\ValidationException;
 class ProductController
 {
+
+    public function __construct(ProductService $productService, ProviderService $providerService)
+    {
+        $this->productService = $productService;
+        $this->providerService = $providerService;
+    }
+
     public function add(Request $request)
     {
-        $validatedData = $request->validate([
-            'category_id' => 'required|string|max:50',
-            'subcategory' => 'string|nullable',
-            'available_quantity' => 'integer|nullable',
-            'status' => 'required|string',
-            'creation_date' => 'required|integer',
-            'last_date_modified' => 'integer|nullable',
-            'name' => 'required|string|max:255',
-            'description' => 'string|nullable',
-            'code' => 'string|nullable',
-            'id' => 'required|string',
-            'price' => 'required|numeric',
-            'discount' => 'integer|nullable',
-            'images' => 'required|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,webp,svg|max:2048'
-        ]);
+        try {
+            $validated = $request->validate([
+                'category_code' => 'required|string|max:50',
+                'subcategory_code' => 'string|nullable',
+                'available_quantity' => 'required|integer',
+                'status' => 'required|string',
+                'name' => 'required|string|max:255',
+                'description' => 'string|nullable',
+                'price' => 'required|numeric',
+                'discount' => 'integer|nullable',
+                'images' => 'required|array',
+                'images.*' => 'image|mimes:jpeg,png,jpg,webp,svg|max:2048',
+                'providers' => 'string|nullable',
+            ]);
 
-        $categoryId = $validatedData['category_id'];
+            $product = $this->productService->add($request, $validated);
 
-        // Obtener el código de la categoría desde la tabla categories
-        $category = Categories::where('category_code', $categoryId)->first();
-        if (!$category) {
-            throw new \Exception("Categoría no encontrada");
+            $this->providerService->assignProductToProvider($validated, $product);
+
+            return response()->json(['message' => 'Producto creado exitosamente', 'product' => $product], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Error al crear el producto',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al crear el producto',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // Extraer el número del código de la categoría (últimos dígitos)
-        $categoryNumber = (int) substr($category->category_code, -3);
-
-        // Obtener el producto con el código más alto en la misma categoría
-        $latestProduct = Product::where('category_id', $categoryId)
-            ->orderBy('code', 'desc')
-            ->first();
-
-        if ($latestProduct) {
-            // Extraer la parte AAA del código (los últimos 3 dígitos)
-            $latestCodeNumber = (int) substr($latestProduct->code, -3);
-            $newProductNumber = $latestCodeNumber + 1;
-        } else {
-            // Si no hay productos en la categoría, empezar en 001
-            $newProductNumber = 1;
-        }
-
-        // Construir el código del producto (ejemplo: 012001)
-        $newCode = "0" . $categoryNumber . str_pad($newProductNumber, 3, '0', STR_PAD_LEFT);
-
-        $validatedData['code'] = $newCode;
-
-        $imagePaths = [];
-        $thumbnailPaths = [];
-
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('images/products', 'public');
-                $imagePaths[] = $path;
-
-                $thumbnailPath = 'images/min/products/' . basename($path);
-
-                $thumbnailFullPath = storage_path('app/public/' . $thumbnailPath);
-
-                if (!file_exists(dirname($thumbnailFullPath))) {
-                    mkdir(dirname($thumbnailFullPath), 0755, true);
-                }
-
-                createThumbnail($image->getRealPath(), $thumbnailFullPath, 100, 100);
-
-                $thumbnailPaths[] = $thumbnailPath;
-            }
-        }
-
-        $validatedData['images'] = json_encode($imagePaths);
-        $validatedData['thumbnails'] = json_encode($thumbnailPaths);
-
-        $product = Product::create($validatedData);
-        return response()->json(['message' => 'Producto creado exitosamente', 'product' => $product], 201);
-
     }
     public function detail($id)
     {
@@ -156,8 +59,8 @@ class ProductController
             return response()->json(Config::get('api-responses.error.not_found'), 404);
         }
 
-        $product->views += 1;
-        $product->save();
+        // $product->views += 1;
+        // $product->save();
 
         return response()->json(array_merge(Config::get('api-responses.success.default'), ['product' => $product]));
     }
@@ -173,7 +76,7 @@ class ProductController
         $query = Product::query();
 
         if ($category) {
-            $query->where('category_id', $category);
+            $query->where('category_code', $category);
         }
 
         if ($name) {
@@ -181,7 +84,7 @@ class ProductController
         }
 
         if ($subcategory) {
-            $query->where('subcategory', 'like', '%' . $subcategory . '%');
+            $query->where('subcategory_code', 'like', '%' . $subcategory . '%');
         }
 
         if (!$panel) {
@@ -210,139 +113,84 @@ class ProductController
     }
     public function update(Request $request, $id)
     {
-        $product = Product::find($id);
+        try {
 
-        if (!$product) {
-            return response()->json(Config::get('api-responses.error.not_found'), 404);
+            $validated = $request->validate([
+                'name' => 'nullable|string',
+                'purchase_price' => 'nullable|numeric',
+                'price' => 'nullable|numeric',
+                'status' => 'nullable|string',
+                'available_quantity' => 'nullable|integer',
+                'category_code' => 'nullable|string',
+                'subcategory_code' => 'string|nullable',
+                'description' => 'string|nullable',
+                'discount' => 'integer|nullable',
+            ]);
+
+            $product = $this->productService->update($validated, $id);
+
+            return response()->json(array_merge(Config::get('api-responses.success.updated'), ['product' => $product]));
+
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al actualizar el producto', 'errors' => $e->errors()]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar el producto', 'error' => $e->getMessage()]);
         }
 
-        $validatedData = $request->validate([
-            'name' => 'nullable|string',
-            'price' => 'nullable|numeric',
-            'status' => 'nullable|string',
-            'available_quantity' => 'nullable|integer',
-            'last_date_modified' => 'required|integer',
-            'category_id' => 'nullable|string',
-            'subcategory' => 'string|nullable',
-            'description' => 'string|nullable',
-            'discount' => 'integer|nullable',
-        ]);
 
-        $product->update($validatedData);
-
-        return response()->json(array_merge(Config::get('api-responses.success.updated'), ['product' => $product]));
     }
     public function updateImages(Request $request, $id)
     {
-        $product = Product::find($id);
 
-        if (!$product) {
-            return response()->json(Config::get('api-responses.error.not_found'), 404);
+        try {
+            $validated = $request->validate([
+                'index' => 'required|integer',
+                'new_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+            ]);
+
+            $product = $this->productService->updateImages($validated, $id);
+
+            return response()->json(['message' => 'Imagen actualizada con éxito', 'product' => $product]);
+
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al actualizar la foto', 'errors' => $e->errors()]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar la foto', 'errors' => $e->getMessage()]);
         }
 
-        $validatedData = $request->validate([
-            'index' => 'required|integer',
-            'new_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
-        ]);
-
-        // Decodifica las imágenes almacenadas como JSON
-        $images = json_decode($product->images, true);
-        $thumbnails = json_decode($product->thumbnails, true);
-
-        // Verifica si el índice es válido
-        if (!isset($images[$validatedData['index']])) {
-            return response()->json(['error' => 'El índice de la imagen no existe'], 400);
-        }
-
-        // Almacena la nueva imagen
-        $newImagePath = $validatedData['new_image']->store('images/products', 'public');
-        $images[$validatedData['index']] = $newImagePath;
-
-        // Crea una miniatura de la nueva imagen
-        $newThumbnailPath = 'images/min/products/' . basename($newImagePath);
-        createThumbnail($validatedData['new_image']->getRealPath(), public_path('storage/' . $newThumbnailPath), 150, 150);
-        $thumbnails[$validatedData['index']] = $newThumbnailPath;
-
-        // Actualiza el producto con las nuevas rutas de imagen y miniatura
-        $product->images = json_encode($images);
-        $product->thumbnails = json_encode($thumbnails);
-        $product->save();
-
-        return response()->json(['message' => 'Imagen actualizada con éxito', 'product' => $product]);
     }
     public function addImage(Request $request, $id)
     {
-        $validatedData = $request->validate([
-            'new_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
-        ]);
+        try {
+            $validated = $request->validate([
+                'new_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+            ]);
 
-        $product = Product::find($id);
+            $product = $this->productService->addImage($validated, $id);
 
-        if (!$product) {
-            return response()->json(Config::get('api-responses.error.not_found'), 404);
+            return response()->json(['message' => 'Imagen agregada con éxito', 'product' => $product]);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al agregar una nueva foto', 'errors' => $e->errors()]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al agregar una nueva foto', 'error' => $e->getMessage()]);
         }
-
-        // Decodifica las imágenes almacenadas como JSON
-        $images = json_decode($product->images, true);
-        $thumbnails = json_decode($product->thumbnails, true);
-
-        if (count($images) >= 5) {
-            return response()->json(['error' => 'No se pueden agregar más de 5 imágenes'], 400);
-        }
-
-        // Almacena la nueva imagen
-        $newImagePath = $validatedData['new_image']->store('images/products', 'public');
-        $images[] = $newImagePath;
-
-        // Crea una miniatura de la nueva imagen
-        $newThumbnailPath = 'images/min/products/' . basename($newImagePath);
-        createThumbnail($validatedData['new_image']->getRealPath(), public_path('storage/' . $newThumbnailPath), 150, 150);
-        $thumbnails[] = $newThumbnailPath;
-
-        // Actualiza el producto con las nuevas rutas de imagen y miniatura
-        $product->images = json_encode($images);
-        $product->thumbnails = json_encode($thumbnails);
-        $product->save();
-
-        return response()->json(['message' => 'Imagen agregada con éxito', 'product' => $product]);
     }
     public function deleteImage(Request $request, $id)
     {
-        $validatedData = $request->validate([
-            'index' => 'required|integer'
-        ]);
+        try {
+            $validated = $request->validate([
+                'index' => 'required|integer'
+            ]);
 
-        $product = Product::find($id);
+            $product = $this->productService->deleteImage($validated, $id);
 
-        if (!$product) {
-            return response()->json(Config::get('api-responses.error.not_found'), 404);
+            return response()->json(['message' => 'Imagen eliminada con éxito', 'product' => $product]);
+
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al eliminar la foto', 'errors' => $e->errors()]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al eliminar la foto', 'error' => $e->getMessage()]);
         }
-
-        // Decodifica las imágenes almacenadas como JSON
-        $images = json_decode($product->images, true);
-        $thumbnails = json_decode($product->thumbnails, true);
-
-        // Verifica si el índice es válido
-        if (!isset($images[$validatedData['index']])) {
-            return response()->json(['error' => 'El índice de la imagen no existe'], 400);
-        }
-
-        // tengo que eliminar la imagen que se encuentra en el índice
-        $imagePath = $images[$validatedData['index']];
-        $thumbnailPath = $thumbnails[$validatedData['index']];
-        Storage::disk('public')->delete($imagePath);
-        Storage::disk('public')->delete($thumbnailPath);
-
-        // Elimina la imagen y la miniatura del arreglo
-        unset($images[$validatedData['index']]);
-        unset($thumbnails[$validatedData['index']]);
-
-        // Actualiza el producto con las nuevas rutas de imagen y miniatura
-        $product->images = json_encode(array_values($images));
-        $product->thumbnails = json_encode(array_values($thumbnails));
-        $product->save();
-
-        return response()->json(['message' => 'Imagen eliminada con éxito', 'product' => $product]);
     }
     public function delete($id)
     {

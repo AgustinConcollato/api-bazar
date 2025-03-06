@@ -19,8 +19,6 @@ class ShoppingCart extends Model
         'quantity'
     ];
 
-    public $timestamps = false;
-
     // ShoppingCart.php
     public function product()
     {

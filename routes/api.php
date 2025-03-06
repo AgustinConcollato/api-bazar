@@ -6,6 +6,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\FirebaseController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ShoppingCartController;
 use App\Http\Controllers\UserAddressController;
 use Illuminate\Support\Facades\Route;
@@ -62,9 +63,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products', [ProductController::class, 'add']);
     Route::post('/products/image-update/{id}', [ProductController::class, 'updateImages']);
     Route::post('/products/image-add/{id}', [ProductController::class, 'addImage']);
-    
+
     Route::put('/products/{id}', [ProductController::class, 'update']);
-    
+
     Route::delete('/products/image-delete/{id}', [ProductController::class, 'deleteImage']);
     Route::delete('/products/{id}', [ProductController::class, 'delete']);
+
+    Route::post('/provider', [ProviderController::class, 'add']);
+    Route::get('/provider', [ProviderController::class, 'get']);
+
 });

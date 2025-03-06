@@ -11,16 +11,18 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-            $table->string('id', 25);
-            $table->string('client', 100);
+            $table->uuid('id');
+            $table->uuid('client_id');
             $table->string('client_name', 100);
-            $table->string('status', 25);
+            $table->enum('status', ['pending', 'completed', 'cancelled', 'elaboration']);
             $table->string('comment', 300)->nullable();
-            $table->integer('total_amount');
-            $table->bigInteger('date');
-            $table->integer('count', true);
+            $table->json('address')->nullable();
+            $table->integer('discount')->nullable();
+            $table->decimal('total_amount', 11);
+            $table->timestamps();
         });
     }
+
     /**
      * Reverse the migrations.
      */

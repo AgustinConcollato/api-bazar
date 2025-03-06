@@ -3,6 +3,7 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Product extends Model
 {
@@ -17,19 +18,33 @@ class Product extends Model
         'description',
         'price',
         'discount',
-        'category_id',
-        'subcategory',
+        'category_code',
+        'subcategory_code',
         'available_quantity',
         'status',
-        'creation_date',
         'code',
-        'id',
         'images',
-        'thumbnails',
-        'last_date_modified'
+        'thumbnails'
     ];
 
-    public $timestamps = false;
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($order) {
+            if (empty($order->id)) {
+                $order->id = Str::uuid();
+            }
+        });
+    }
+
+    public function providers()
+    {
+        return $this->belongsToMany(Provider::class, 'product_providers')
+            ->withPivot('purchase_price', 'provider_url')
+            ->withTimestamps();
+    }
+
 }
 
 

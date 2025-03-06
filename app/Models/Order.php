@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
@@ -20,14 +21,23 @@ class Order extends Model
         'comment',
         'discount',
         'total_amount',
-        'date',
         'id',
         'address',
         'client_name'
     ];
-    public $timestamps = false;
 
-    // En el modelo Order.php
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($order) {
+            if (empty($order->id)) {
+                $order->id = Str::uuid();
+            }
+        });
+    }
+
     public function products()
     {
         return $this->hasMany(OrderProducts::class, 'order_id', 'id');
