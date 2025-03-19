@@ -25,7 +25,6 @@ class ClientController
     {
         $client = $request->validate([
             'name' => 'required|string',
-            'id' => 'required|string',
         ]);
 
         Client::create($client);
