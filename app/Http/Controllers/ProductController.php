@@ -51,6 +51,7 @@ class ProductController
             ], 500);
         }
     }
+    
     public function detail($id)
     {
         $product = Product::find($id);
@@ -75,42 +76,50 @@ class ProductController
         $panel = $request->input('panel');
         $date = $request->input('date');
         $views = $request->input('views');
+        $price = $request->input('price');
+        $status = $request->input('status');
 
-        $query = Product::query();
+        $query = Product::with('providers');
 
         if ($category) {
             $query->where('category_code', $category);
-        }
-
-        if ($name) {
-            $query->where('name', 'like', '%' . $name . '%');
         }
 
         if ($subcategory) {
             $query->where('subcategory_code', 'like', '%' . $subcategory . '%');
         }
 
+        if ($name) {
+            $query->where('name', 'like', '%' . $name . '%');
+        }
+
         if (!$panel) {
             $query->where('status', 'active');
         }
 
+        if ($status) {
+            $query->where('status', $status);
+        }
+
         if ($date) {
-            $query->where('creation_date', '>=', $date);
+            $query->where('created_at', '>=', $date);
 
-            $products = $query->orderBy('creation_date', 'desc')->paginate(10);
+            // $products = $query->orderBy('created_at', 'desc')->paginate(10);
 
-            return response()->json($products);
+            // return response()->json($products);
         }
 
         if ($views) {
-            $query->get();
-
-            $products = $query->orderBy('views', 'desc')->paginate(10);
-
-            return response()->json($products);
+            $query->orderBy('views', 'desc');
+        } else if ($price === 'min') {
+            $query->orderBy('price', 'asc');
+        } else if ($price === 'max') {
+            $query->orderBy('price', 'desc');
+        } else {
+            $query->orderBy('name');
         }
 
-        $products = $query->orderBy('name')->paginate(20);
+        $products = $query->paginate(20);
 
         return response()->json($products);
     }
