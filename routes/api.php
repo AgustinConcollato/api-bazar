@@ -20,11 +20,6 @@ Route::get('/products', [ProductController::class, 'search']);
 Route::get('/categories', [CategoriesController::class, 'categories']);
 Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
-Route::post('/order', [OrderController::class, 'create']);
-Route::post('/order/product/add', [OrderController::class, 'add']);
-
-Route::delete('/order/cancel/{id}', [OrderController::class, 'cancel']);
-
 Route::get('/order/pdf/{id}', [OrderController::class, 'pdf']);
 Route::get('/order/pending', [OrderController::class, 'pending']);
 Route::get('/order/pending/{id}', [OrderController::class, 'pending']);
@@ -70,6 +65,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/products/{id}', [ProductController::class, 'delete']);
 
     Route::post('/provider', [ProviderController::class, 'add']);
+    Route::post('/provider/assign-product', [ProviderController::class, 'assignProductToProvider']);
     Route::get('/provider', [ProviderController::class, 'get']);
+
+    Route::post('/order', [OrderController::class, 'create']);
+    Route::post('/order/product/add', [OrderController::class, 'add']);
+    
+    Route::delete('/order/cancel/{id}', [OrderController::class, 'cancel']);
 
 });
