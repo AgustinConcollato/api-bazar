@@ -41,7 +41,10 @@ class ProviderService
         if (is_array($providers) && count($providers) > 0) {
             foreach ($providers as $providerId => $purchasePrice) {
                 // Asociamos el proveedor con el producto en la tabla intermedia
-                $product->providers()->attach($providerId, ['purchase_price' => $purchasePrice]);
+                // $product->providers()->attach($providerId, ['purchase_price' => $purchasePrice]);
+                $product->providers()->syncWithoutDetaching([
+                    $providerId => ['purchase_price' => $purchasePrice]
+                ]);
             }
         }
 

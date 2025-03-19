@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Services\ProviderService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -55,5 +56,31 @@ class ProviderController
         // buscar todos los proveedores
         $providers = $this->providerService->getProviders();
         return response()->json($providers);
+    }
+
+    public function assignProductToProvider(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'product_id' => 'required|exists:products,id',
+                'providers' => 'required|json',
+            ]);
+
+            $product = Product::find($validated['product_id']);
+
+            $this->providerService->assignProductToProvider($validated, $product);
+
+            $updatedProduct = Product::with('providers')->find($product->id);
+
+            return response()->json([
+                'message' => 'Producto actualizado con proveedores',
+                'product' => $updatedProduct
+            ], 200);
+
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al asignar un precio de compra', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al asignar un precio de compra', 'error' => $e->getMessage()], 500);
+        }
     }
 }
