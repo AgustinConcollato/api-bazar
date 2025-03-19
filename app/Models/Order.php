@@ -10,18 +10,16 @@ class Order extends Model
 {
 
     use HasFactory;
-
     protected $primaryKey = 'id';  // Si el campo `id` es diferente en la base de datos
     public $incrementing = false;   // Si el ID no es auto-incremental
     protected $keyType = 'string';  // Asegúrate de que el tipo sea string
 
     protected $fillable = [
-        'client',
+        'client_id',
         'status',
         'comment',
         'discount',
         'total_amount',
-        'id',
         'address',
         'client_name'
     ];

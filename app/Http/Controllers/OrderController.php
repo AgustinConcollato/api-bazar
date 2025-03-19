@@ -4,39 +4,40 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderProducts;
+use App\Services\OrderService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Config;
 
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Request;
 
 class OrderController
 {
+    public function __construct(OrderService $orderService)
+    {
+        $this->orderService = $orderService;
+    }
+
     public function create(Request $request)
     {
 
-        $client_id = $request->get("client");
+        try {
+            $validated = $request->validate([
+                'client_id' => 'required|string|exists:clients,id',
+                'comment' => 'nullable|string|max:300',
+                'status' => 'required|string|in:pending,completed,cancelled,elaboration',
+                'total_amount' => 'nullable|numeric|min:0',
+                'client_name' => 'required|string|max:255'
+            ]);
 
-        $existingOrder = Order::where('client', $client_id)->where('status', 'pending')->first();
+            $order = $this->orderService->create($validated);
 
-        if ($existingOrder) {
-            return response()->json([
-                'error' => ['message' => 'Ya existe un pedido pendiente para este cliente'],
-            ], 400);
+            return response()->json($order, 201);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al crear un nuevo pedido', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al crear un nuevo pedido', 'errors' => $e->getMessage()], 500);
         }
-
-        $data = $request->validate([
-            'client' => 'required|string',
-            'comment' => 'nullable|string',
-            'status' => 'required|string',
-            'total_amount' => 'nullable|numeric',
-            'date' => 'required|integer',
-            'id' => 'required|string',
-            'client_name' => 'required|string'
-        ]);
-
-        $order = Order::create($data);
-
-        return response()->json($order, 201);
     }
 
     public function pending($id = null)
@@ -45,11 +46,11 @@ class OrderController
         if ($id) {
             $orders = Order::where('status', 'pending')
                 ->where('client', $id)
-                ->orderBy('date', 'asc')
+                ->orderBy('created_at', 'asc')
                 ->get();
         } else {
             $orders = Order::where('status', 'pending')
-                ->orderBy('date', 'asc')
+                ->orderBy('created_at', 'asc')
                 ->get();
         }
 
@@ -100,40 +101,26 @@ class OrderController
 
     public function add(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string',
-            'price' => 'required|numeric',
-            'order_id' => 'required|string',
-            'product_id' => 'required|string',
-            'picture' => 'nullable|string',
-            'quantity' => 'required|integer',
-            'discount' => 'nullable|integer'
-        ]);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string',
+                'purchase_price' => 'numeric|nullable',
+                'price' => 'required|numeric',
+                'order_id' => 'required|string',
+                'product_id' => 'required|string',
+                'picture' => 'nullable|string',
+                'quantity' => 'required|integer',
+                'discount' => 'nullable|integer'
+            ]);
 
-        $price = $request->input('price');
-        $quantity = $request->input('quantity');
-        $discount = $request->input('discount');
+            $product = $this->orderService->add($validated);
 
-        $subtotal = $discount ?
-            ($price - ($price * $discount) / 100) * $quantity :
-            $price * $quantity;
-
-        $data['subtotal'] = $subtotal;
-
-        $productInOrder = OrderProducts::where('order_id', $data['order_id'])
-            ->where('product_id', $data['product_id'])
-            ->first();
-
-        if ($productInOrder) {
-            return response()->json(['message' => 'El producto ya esta en la lista'], 400);
+            return response()->json($product, 201);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al agregar producto al pedido', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al agregar producto al pedido', 'error' => $e->getMessage()], 500);
         }
-
-        $product = OrderProducts::create($data);
-
-        $order = Order::find($data['order_id']);
-        $order->update(['total_amount' => $order->total_amount + $subtotal]);
-
-        return response()->json($product, 201);
     }
 
     public function remove(Request $request)
@@ -204,6 +191,7 @@ class OrderController
         $name = $request->input('name');
         $price = $request->input('price');
         $quantity = $request->input('quantity');
+        $discount = $request->input('discount');
 
         $product = OrderProducts::where(['product_id' => $productId])
             ->where(['order_id' => $orderId])
@@ -218,17 +206,18 @@ class OrderController
         if ($order) {
             $order->total_amount -= $product->subtotal;
 
-            $discount = $product->discount;
+            $currentDiscount = $product->discount;
 
-            $subtotal = $discount ?
-                ($price - ($discount * $price) / 100) * $quantity :
+            $subtotal = $currentDiscount ?
+                ($price - ($currentDiscount * $price) / 100) * $quantity :
                 $price * $quantity;
 
             $product->update([
                 'name' => $name,
                 'price' => $price,
                 'quantity' => $quantity,
-                'subtotal' => $subtotal
+                'subtotal' => $subtotal,
+                'discount' => $discount,
             ]);
 
             $order->total_amount += $product->subtotal;

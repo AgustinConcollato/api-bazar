@@ -8,13 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class OrderProducts extends Model
 {
     use HasFactory;
-    protected $table = 'products_order';
-    protected $primaryKey = 'count';
-    public $incrementing = false;
+    protected $table = 'product_order';
 
     protected $fillable = [
         'name',
         'picture',
+        'purchase_price',
         'price',
         'product_id',
         'discount',
@@ -22,7 +21,6 @@ class OrderProducts extends Model
         'quantity',
         'subtotal',
     ];
-    public $timestamps = false;
 
     public function order()
     {
