@@ -55,4 +55,26 @@ class OrderService
             return $product;
         }
     }
+
+    public function getCompleted($validated, $id)
+    {
+
+        $query = Order::where('status', 'completed')
+            ->whereYear('updated_at', $validated['year']);
+
+        // Si se envió un mes, también filtramos por mes
+        if (!empty($validated['month'])) {
+            $query->whereMonth('updated_at', $validated['month']);
+        }
+
+        // Si se envió un `client_id`, filtramos por cliente
+        if ($id) {
+            $query->where('client_id', $id);
+        }
+
+        // Obtener los resultados
+        $orders = $query->orderBy('updated_at', 'desc')->get();
+
+        return $orders;
+    }
 }
