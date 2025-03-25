@@ -42,7 +42,6 @@ class OrderController
 
     public function pending($id = null)
     {
-
         if ($id) {
             $orders = Order::where('status', 'pending')
                 ->where('client', $id)
@@ -135,7 +134,9 @@ class OrderController
 
         $product->delete();
 
-        return response()->json($product);
+        $order = Order::with('products')->find($order->id);
+
+        return response()->json($order);
     }
 
     public function cancel($id)
@@ -197,11 +198,9 @@ class OrderController
         if ($order) {
             $order->total_amount -= $product->subtotal;
 
-            $currentDiscount = $product->discount;
-
-            $subtotal = $currentDiscount ?
-                ($price - ($currentDiscount * $price) / 100) * $quantity :
-                $price * $quantity;
+            $subtotal = $discount
+                ? ($price - ($discount * $price) / 100) * $quantity
+                : $price * $quantity;
 
             $product->update([
                 'name' => $name,
