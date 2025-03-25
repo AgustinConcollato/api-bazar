@@ -184,6 +184,38 @@ class ProductService
             throw new \Exception(Config::get('api-responses.error.not_found'));
         }
 
+        if (!empty($validated['category_code']) && $validated['category_code'] !== $product->category_code) {
+            $newCategoryCode = $validated['category_code'];
+
+            $category = Categories::where('code', $newCategoryCode)->first();
+            if (!$category) {
+                throw new \Exception("Categoría no encontrada");
+            }
+
+            $categoryNumber = (int) substr($category->code, -3);
+
+            // Obtener el producto con el código más alto en la misma categoría
+            $latestProduct = Product::where('category_code', $newCategoryCode)
+                ->orderBy('code', 'desc')
+                ->first();
+
+
+            if ($latestProduct) {
+                // Extraer la parte AAA del código (los últimos 3 dígitos)
+                $latestCodeNumber = (int) substr($latestProduct->code, -3);
+                $newProductNumber = $latestCodeNumber + 1;
+            } else {
+                // Si no hay productos en la categoría, empezar en 001
+                $newProductNumber = 1;
+            }
+
+            // Construir el código del producto (ejemplo: 012001)
+            $newCode = "0" . $categoryNumber . str_pad($newProductNumber, 3, '0', STR_PAD_LEFT);
+
+            $validated['code'] = $newCode;
+            $validated['subcategory_code'] = null;
+        }
+
         $product->update($validated);
 
         return $product;
