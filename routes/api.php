@@ -67,11 +67,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/provider', [ProviderController::class, 'add']);
     Route::post('/provider/assign-product', [ProviderController::class, 'assignProductToProvider']);
+
     Route::get('/provider', [ProviderController::class, 'get']);
+
+    Route::delete('/provider/{prodiverId}/product/{productId}', [ProviderController::class, 'deleteProductProvider']);
 
     Route::post('/order', [OrderController::class, 'create']);
     Route::post('/order/product/add', [OrderController::class, 'add']);
-    
+
     Route::delete('/order/cancel/{id}', [OrderController::class, 'cancel']);
 
 });
