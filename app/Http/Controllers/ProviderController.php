@@ -81,4 +81,18 @@ class ProviderController
             return response()->json(['message' => 'Error al asignar un precio de compra', 'error' => $e->getMessage()], 500);
         }
     }
+
+    public function deleteProductProvider($providerId, $productId)
+    {
+        try {
+
+            $providers = $this->providerService->deleteProductProvider($providerId, $productId);
+
+            return response()->json(['message' => 'Proveedor eliminado del producto correctamente', 'providers' => $providers], 200);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al eliminar el proveedor del producto', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al eliminar el proveedor del producto', 'error' => $e->getMessage()], 500);
+        }
+    }
 }

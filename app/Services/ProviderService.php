@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\ProductProvider;
 use App\Models\Provider;
 
 class ProviderService
@@ -52,13 +53,33 @@ class ProviderService
 
         if (is_array($providers) && count($providers) > 0) {
             foreach ($providers as $providerId => $purchasePrice) {
-                // Asociamos el proveedor con el producto en la tabla intermedia
-                // $product->providers()->attach($providerId, ['purchase_price' => $purchasePrice]);
                 $product->providers()->syncWithoutDetaching([
                     $providerId => ['purchase_price' => $purchasePrice]
                 ]);
             }
         }
-
     }
+
+    public function updateProductProvider($validated, $productProvider)
+    {
+        $productProvider->update($validated);
+
+        return $productProvider;
+    }
+
+    public function deleteProductProvider($providerId, $productId)
+    {
+        $productProvider = ProductProvider::where('provider_id', $providerId)
+            ->where('product_id', $productId)
+            ->first();
+
+        if ($productProvider) {
+            $productProvider->delete();
+
+            $providers = $this->getProvidersByProduct($productId);
+
+            return $providers;
+        }
+    }
+
 }
