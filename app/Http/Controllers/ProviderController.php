@@ -44,18 +44,16 @@ class ProviderController
             $providers = $this->providerService->getProvidersByProduct($productId);
 
             return response()->json($providers);
-        }
-
-        if ($providerId) {
+        } else if ($providerId) {
             // buscar todos los productos del proveedor con el $providerId
             $products = $this->providerService->getProductsByProvider($providerId);
 
             return response()->json($products);
-        }
+        } else {
+            $providers = $this->providerService->getProviders();
 
-        // buscar todos los proveedores
-        $providers = $this->providerService->getProviders();
-        return response()->json($providers);
+            return response()->json($providers);
+        }
     }
 
     public function assignProductToProvider(Request $request)

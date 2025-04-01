@@ -25,12 +25,24 @@ class ProviderService
     {
         $provider = Provider::find($providerId);
 
-        return $provider->products ?? [];
+        $products = $provider->products()->paginate(20);
+
+        return ['provider' => $provider, 'products' => $products];
+
     }
 
     public function getProviders()
     {
         $providers = Provider::all();
+
+        $providers = $providers->map(function ($provider) {
+            $response = $this->getProductsByProvider($provider->id);
+            $products = $response['products']->total();
+
+            $provider['products_count'] = $products;
+            return $provider;
+        });
+
         return $providers;
     }
 
@@ -49,5 +61,4 @@ class ProviderService
         }
 
     }
-
 }
