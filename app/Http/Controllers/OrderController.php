@@ -25,7 +25,7 @@ class OrderController
             $validated = $request->validate([
                 'client_id' => 'required|string|exists:clients,id',
                 'comment' => 'nullable|string|max:300',
-                'status' => 'required|string|in:pending,completed,cancelled,elaboration',
+                'status' => 'required|string|in:pending,completed,cancelled,accepted,rejected',
                 'total_amount' => 'nullable|numeric|min:0',
                 'client_name' => 'required|string|max:255'
             ]);
@@ -40,7 +40,7 @@ class OrderController
         }
     }
 
-    public function pending($id = null)
+    public function getOrdersPending($id = null)
     {
         if ($id) {
             $orders = Order::where('status', 'pending')
@@ -50,6 +50,21 @@ class OrderController
         } else {
             $orders = Order::where('status', 'pending')
                 ->orderBy('created_at', 'asc')
+                ->get();
+        }
+
+        return response()->json($orders);
+    }
+    public function getOrdersAccepted($id = null)
+    {
+        if ($id) {
+            $orders = Order::where('status', 'accepted')
+                ->where('client', $id)
+                ->orderBy('updated_at', 'asc')
+                ->get();
+        } else {
+            $orders = Order::where('status', 'accepted')
+                ->orderBy('updated_at', 'asc')
                 ->get();
         }
 
@@ -142,7 +157,7 @@ class OrderController
     public function cancel($id)
     {
         $order = Order::find($id);
-        $order->delete();
+        $order->update(['status' => 'cancelled']);
 
         return response()->json(Config::get('api-responses.success.deleted'));
     }
@@ -153,6 +168,26 @@ class OrderController
         $order->update(['status' => 'completed']);
 
         return response()->json(Config::get('api-responses.success.default'));
+    }
+
+    public function accept($id)
+    {
+        $order = Order::find($id);
+        $order->update(['status' => 'accepted']);
+
+        return response()->json(Config::get('api-responses.success.default'));
+    }
+
+    public function reject($id)
+    {
+        $order = Order::find($id);
+        $order->update(['status' => 'rejected']);
+
+        $orders = Order::where('status', 'pending')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return response()->json($orders);
     }
 
     public function pdf(Request $request, $id)
