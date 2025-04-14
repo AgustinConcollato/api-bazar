@@ -20,13 +20,24 @@ Route::get('/products', [ProductController::class, 'search']);
 Route::get('/categories', [CategoriesController::class, 'categories']);
 Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
+// rutas Order
+
 Route::get('/order/pdf/{id}', [OrderController::class, 'pdf']);
-Route::get('/order/pending', [OrderController::class, 'pending']);
-Route::get('/order/pending/{id}', [OrderController::class, 'pending']);
+
+Route::get('/order/pending', [OrderController::class, 'getOrdersPending']);
+Route::get('/order/pending/{id}', [OrderController::class, 'getOrdersPending']);
+
+Route::get('/order/accepted', [OrderController::class, 'getOrdersAccepted']);
+Route::get('/order/accepted/{id}', [OrderController::class, 'getOrdersAccepted']);
+
 Route::get('/order/completed', [OrderController::class, 'completed']);
 Route::get('/order/completed/{id}', [OrderController::class, 'completed']);
+
 Route::get('/order/{id}', [OrderController::class, 'products']);
+
 Route::get('/order/user/{userId}', [OrderController::class, 'get']);
+
+// rutas Order
 
 Route::post('/cart', [ShoppingCartController::class, 'add']);
 Route::post('/cart/confirm', [ShoppingCartController::class, 'confirm']);
@@ -53,6 +64,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::put('/order/complete/{id}', [OrderController::class, 'complete']);
     Route::put('/order/product', [OrderController::class, 'update']);
+
+    Route::put('/order/accept/{id}', [OrderController::class, 'accept']);
+    Route::put('/order/reject/{id}', [OrderController::class, 'reject']);
 
     Route::delete('/order/product/remove', [OrderController::class, 'remove']);
 
