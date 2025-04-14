@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->uuid('client_id');
             $table->string('client_name', 100);
-            $table->enum('status', ['pending', 'completed', 'cancelled', 'elaboration', 'rejected']);
+            $table->enum('status', ['pending', 'completed', 'cancelled', 'accepted', 'rejected']);
             $table->string('comment', 300)->nullable();
             $table->json('address')->nullable();
             $table->integer('discount')->nullable();
