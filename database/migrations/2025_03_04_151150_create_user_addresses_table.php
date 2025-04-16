@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('status', 25)->nullable();
             $table->string('code', 25);
             $table->string('address_number', 25);
-            $table->integer('id');
+            $table->id();
         });
     }
 
