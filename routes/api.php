@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\FirebaseController;
@@ -8,11 +9,11 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ShoppingCartController;
-use App\Http\Controllers\UserAddressController;
+use App\Http\Controllers\ClientAddressController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [UserController::class, 'register']);
+Route::post('/login', [UserController::class, 'login']);
 
 Route::get('/products/{id}', [ProductController::class, 'detail']);
 Route::get('/products', [ProductController::class, 'search']);
@@ -48,12 +49,12 @@ Route::put('/cart', [ShoppingCartController::class, 'update']);
 
 Route::delete('/cart/{user}/{id}', [ShoppingCartController::class, 'delete']);
 
-Route::get('/user/{userId}', [UserAddressController::class, 'get']);
-Route::post('/user', [UserAddressController::class, 'add']);
-Route::put('/user/{userId}', [UserAddressController::class, 'update']);
+Route::get('/user/{userId}', [ClientAddressController::class, 'get']);
+Route::post('/user', [ClientAddressController::class, 'add']);
+Route::put('/user/{userId}', [ClientAddressController::class, 'update']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout', [UserController::class, 'logout']);
 
     Route::get('/clients/{id}', [ClientController::class, 'get']);
     Route::get('/clients', [ClientController::class, 'get']);
@@ -90,5 +91,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/order/product/add', [OrderController::class, 'add']);
 
     Route::delete('/order/cancel/{id}', [OrderController::class, 'cancel']);
+
+    Route::get('/analytics/net-profit', [AnalyticsController::class, 'netProfit']);
 
 });
