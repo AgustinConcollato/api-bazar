@@ -51,8 +51,8 @@ class ProductController
             ], 500);
         }
     }
-    
-    public function detail($id)
+
+    public function detail(Request $request, $id)
     {
         $product = Product::find($id);
 
@@ -60,11 +60,17 @@ class ProductController
             return response()->json(Config::get('api-responses.error.not_found'), 404);
         }
 
-        $providers = $this->providerService->getProvidersByProduct($id);
+        $panel = $request->input('panel', false);
 
-        $product['providers'] = $providers;
-        // $product->views += 1;
-        // $product->save();
+        if ($panel) {
+            $providers = $this->providerService->getProvidersByProduct($id);
+
+            $product['providers'] = $providers;
+        } else {
+            $product->views += 1;
+            $product->save();
+        }
+
 
         return response()->json(array_merge(Config::get('api-responses.success.default'), ['product' => $product]));
     }

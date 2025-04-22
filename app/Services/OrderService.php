@@ -60,6 +60,7 @@ class OrderService
     {
 
         $query = Order::where('status', 'completed')
+            ->with('payments')
             ->whereYear('updated_at', $validated['year']);
 
         // Si se envió un mes, también filtramos por mes

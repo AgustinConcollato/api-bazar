@@ -17,7 +17,7 @@
     }
 
     header {
-        border-bottom: 1px solid #000;
+        /* border-bottom: 1px solid #000; */
         margin-bottom: 20px;
         padding-bottom: 10px;
     }
@@ -79,7 +79,6 @@
             <p>Pedido para: {{ $client['name'] }}</p>
             <p>Fecha: {{ $date }}</p>
         </div>
-        <p>Código del pedido: {{ $code }}</p>
     </header>
     <table cellspacing="0">
         <thead>

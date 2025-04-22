@@ -21,21 +21,28 @@ class ClientAddressController
 
     public function add(Request $request)
     {
+        try {
+            $data = $request->validate([
+                'zip_code' => 'nullable|string',
+                'status' => 'nullable|string',
+                'client_id' => 'required|string',
+                'province' => 'required|string',
+                'city' => 'required|string',
+                'address' => 'required|string',
+                'code' => 'required|string',
+                'address_number' => 'required|string',
+            ]);
 
-        $data = $request->validate([
-            'zip_code' => 'nullable|string',
-            'status' => 'nullable|string',
-            'user_id' => 'required|string',
-            'province' => 'required|string',
-            'city' => 'required|string',
-            'address' => 'required|string',
-            'code' => 'required|string',
-            'address_number' => 'required|string',
-        ]);
+            $address = ClientAddress::create($data);
 
-        $address = ClientAddress::create($data);
-
-        return response()->json($address, 201);
+            return response()->json($address, 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al crear la dirección',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
     public function update(Request $request, $userId)
     {

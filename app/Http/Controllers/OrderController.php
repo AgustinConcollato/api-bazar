@@ -6,10 +6,10 @@ use App\Models\Order;
 use App\Models\OrderProducts;
 use App\Services\OrderService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpFoundation\Request;
 
 class OrderController
 {
@@ -44,11 +44,13 @@ class OrderController
     {
         if ($id) {
             $orders = Order::where('status', 'pending')
+                ->with('payments')
                 ->where('client', $id)
                 ->orderBy('created_at', 'asc')
                 ->get();
         } else {
             $orders = Order::where('status', 'pending')
+                ->with('payments')
                 ->orderBy('created_at', 'asc')
                 ->get();
         }
@@ -57,18 +59,25 @@ class OrderController
     }
     public function getOrdersAccepted($id = null)
     {
-        if ($id) {
-            $orders = Order::where('status', 'accepted')
-                ->where('client', $id)
-                ->orderBy('updated_at', 'asc')
-                ->get();
-        } else {
-            $orders = Order::where('status', 'accepted')
-                ->orderBy('updated_at', 'asc')
-                ->get();
-        }
+        try {
+            if ($id) {
+                $orders = Order::where('status', 'accepted')
+                    ->with('payments')
+                    ->where('client', $id)
+                    ->orderBy('updated_at', 'asc')
+                    ->get();
+            } else {
+                $orders = Order::where('status', 'accepted')
+                    ->with('payments')
+                    ->orderBy('updated_at', 'asc')
+                    ->get();
+            }
 
-        return response()->json($orders);
+            return response()->json($orders);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al obtener los pedidos', 'error' => $e->getMessage()]);
+        }
     }
 
     public function completed(Request $request, $id = null)
@@ -86,20 +95,24 @@ class OrderController
 
     public function get($userId)
     {
-        $orders = Order::where('client', $userId)
-            ->orderBy('date', 'desc')
+        $orders = Order::where('client_id', $userId)
+            ->orderBy('updated_at', 'desc')
             ->get();
 
         return response()->json($orders);
     }
 
-    public function products($id)
+    public function detail($id)
     {
         $order = Order::with('products')->find($id);
 
         if (!$order) {
             return response()->json(Config::get('api-responses.error.not_found'), 404);
         }
+
+        $payments = $order->payments;
+
+        $order['payments'] = $payments;
 
         return response()->json($order);
     }
@@ -184,6 +197,7 @@ class OrderController
         $order->update(['status' => 'rejected']);
 
         $orders = Order::where('status', 'pending')
+            ->with('payments')
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -199,7 +213,7 @@ class OrderController
         $data = [
             'client' => ['name' => $order->client_name, 'id' => $order->client],
             'code' => $order->id,
-            'date' => date('d/m/Y', ($date / 1000)),
+            'date' => $order->updated_at->format('d/m/Y'),
             'products' => $order->products,
             'discount' => $order->discount,
             'total' => $order->total_amount

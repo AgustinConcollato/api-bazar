@@ -17,7 +17,7 @@ class CategoriesController
 
     public function category($code)
     {
-        $category = Categories::with('subcategories')->where('category_code', $code)->first();
+        $category = Categories::with('subcategories')->where('code', $code)->first();
 
         if (!$category) {
             return response()->json(Config::get('api-responses.error.not_found'), 404);

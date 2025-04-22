@@ -36,15 +36,38 @@ class Order extends Model
         });
     }
 
-    public function products()
-    {
-        return $this->hasMany(OrderProducts::class, 'order_id', 'id');
-    }
-
     protected static function booted()
     {
         static::deleting(function ($order) {
             $order->products()->delete();
         });
+    }
+
+    public function products()
+    {
+        return $this->hasMany(OrderProducts::class, 'order_id', 'id');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'order_id', 'id');
+    }
+
+    // Total pagado hasta el momento
+    public function totalPaid(): float
+    {
+        return $this->payments->sum('amount');
+    }
+
+    // Cuánto falta pagar
+    public function remainingAmount(): float
+    {
+        return max(0, $this->total_amount - $this->totalPaid());
+    }
+
+    // Ya está totalmente pagado
+    public function isPaid(): bool
+    {
+        return $this->totalPaid() >= $this->total_amount;
     }
 }
