@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Http\Controllers;
+
+// use App\Models\Payment;
+// use App\Models\Order;
+use Illuminate\Http\Request;
+use App\Services\PaymentService;
+use Illuminate\Validation\ValidationException;
+
+final class PaymentController
+{
+    public function __construct(PaymentService $paymentService)
+    {
+        $this->paymentService = $paymentService;
+    }
+
+    public function createPayment(Request $request)
+    {
+
+        try {
+            $validated = $request->validate([
+                'order_id' => 'required|string',
+                'method' => 'required|string',
+                'amount' => 'required|numeric',
+            ]);
+
+            $payment = $this->paymentService->createPayment($validated);
+
+            return response()->json([
+                'message' => 'Pago creado exitosamente',
+                'payment' => $payment
+            ], 201);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al crear el pago',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+}
