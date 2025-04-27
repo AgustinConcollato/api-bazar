@@ -3,22 +3,40 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\HasApiTokens;
 
-class Client extends Model
+class Client extends Authenticatable
 {
-
-    use HasFactory;
+    use HasFactory, Notifiable, HasApiTokens;
 
     protected $primaryKey = 'id';
     public $incrementing = false;
     protected $keyType = 'string';
 
     protected $fillable = [
-        'name'
+        'name',
+        'email',
+        'password',
+        'phone_number',
+        'source',
+        'email_verified_at',
+        'email_verification_code',
+        'email_verification_expires_at',
     ];
 
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'email_verification_code',
+    ];
+    
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'email_verification_expires_at' => 'datetime',
+    ];
     protected static function boot()
     {
         parent::boot();
@@ -29,16 +47,15 @@ class Client extends Model
             }
         });
     }
+
     public function orders()
     {
         return $this->hasMany(Order::class, 'client_id', 'id');
     }
 
-    protected static function booted()
+    public function address()
     {
-        static::deleting(function ($client) {
-            $client->orders()->delete();
-        });
+        return $this->hasMany(ClientAddress::class, 'client_id', 'id');
     }
 
 }

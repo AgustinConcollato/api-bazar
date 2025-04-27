@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderProducts;
 
@@ -17,9 +18,18 @@ class OrderService
             throw new \Exception('Ya existe un pedido pendiente para este cliente', 400);
         }
 
+        $client = Client::with('address')->find($clientId);
+
+        $selectedAddress = null;
+
+        if ($client && $client->address->count()) {
+            $selected = $client->address->firstWhere('status', 'selected');
+            $selectedAddress = $selected ? $selected->toArray() : null;
+        }
 
         $validated['comment'] = isset($validated['comment']) ? strip_tags($validated['comment']) : null;
         $validated['total_amount'] ??= 0;
+        $validated['address'] = $selectedAddress ? json_encode($selectedAddress) : null;
 
         $order = Order::create($validated);
         return $order;

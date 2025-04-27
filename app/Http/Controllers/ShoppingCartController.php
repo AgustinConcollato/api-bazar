@@ -21,12 +21,12 @@ class ShoppingCartController
     public function add(Request $request)
     {
         $data = $request->validate([
-            'user_id' => 'required|string',
+            'client_id' => 'required|string',
             'product_id' => 'required|string',
             'quantity' => 'required|integer'
         ]);
 
-        $shoppingCart = ShoppingCart::where('client_id', $data['user_id'])
+        $shoppingCart = ShoppingCart::where('client_id', $data['client_id'])
             ->where('product_id', $data['product_id'])
             ->first();
 
@@ -36,9 +36,6 @@ class ShoppingCartController
 
             return response()->json($shoppingCart, 200);
         }
-
-        $data['client_id'] = $data['user_id'];
-        unset($data['user_id']);
 
         $shoppingCart = ShoppingCart::create($data);
 
@@ -67,10 +64,10 @@ class ShoppingCartController
 
         $id = $request->input('product_id');
         $quantity = $request->input('quantity');
-        $user = $request->input('user_id');
+        $client = $request->input('client_id');
 
         $product = ShoppingCart::where('product_id', $id)
-            ->where('client_id', $user)
+            ->where('client_id', $client)
             ->first();
 
         $product->update(['quantity' => $quantity]);

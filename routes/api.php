@@ -4,12 +4,14 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\ClientController;
-use App\Http\Controllers\FirebaseController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ShoppingCartController;
 use App\Http\Controllers\ClientAddressController;
+use App\Http\Middleware\EnsureClient;
+use App\Http\Middleware\EnsureClientOwnsResource;
+use App\Http\Middleware\EnsureUser;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [UserController::class, 'register']);
@@ -47,19 +49,32 @@ Route::put('/cart', [ShoppingCartController::class, 'update']);
 
 Route::delete('/cart/{user}/{id}', [ShoppingCartController::class, 'delete']);
 
+// Route::get('/clients/{id}', [ClientController::class, 'get']);
+Route::post('/clients/register', [ClientController::class, 'register']);
+Route::post('/clients/login', [ClientController::class, 'login']);
+
 Route::get('/user/{userId}', [ClientAddressController::class, 'get']);
 Route::post('/user', [ClientAddressController::class, 'add']);
 Route::put('/user/{userId}', [ClientAddressController::class, 'update']);
 
-Route::middleware('auth:sanctum')->group(function () {
+
+// Route::get('/clients/auth', [ClientController::class, 'auth']);
+Route::middleware(['web'])->get('/clients/auth', [ClientController::class, 'auth']);
+
+Route::middleware(['auth:client', EnsureClient::class])->group(function () {
+    
+    Route::post('clients/logout', [ClientController::class, 'logout']);
+});
+
+
+Route::middleware(['auth:sanctum', EnsureClientOwnsResource::class])->group(function () {
+
+});
+
+Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
     Route::post('/logout', [UserController::class, 'logout']);
 
-    Route::get('/clients/{id}', [ClientController::class, 'get']);
     Route::get('/clients', [ClientController::class, 'get']);
-
-    Route::post('/clients', [ClientController::class, 'add']);
-
-    Route::get('/firebase/users', [FirebaseController::class, 'users']);
 
     Route::get('/order/pending', [OrderController::class, 'getOrdersPending']);
     Route::get('/order/accepted', [OrderController::class, 'getOrdersAccepted']);

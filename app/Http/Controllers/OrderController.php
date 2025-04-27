@@ -8,7 +8,6 @@ use App\Services\OrderService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
-
 use Illuminate\Validation\ValidationException;
 
 class OrderController
