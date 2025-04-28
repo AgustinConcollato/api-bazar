@@ -31,8 +31,10 @@ class Client extends Authenticatable
         'password',
         'remember_token',
         'email_verification_code',
+        'source',
+        'email_verification_expires_at'
     ];
-    
+
     protected $casts = [
         'email_verified_at' => 'datetime',
         'email_verification_expires_at' => 'datetime',

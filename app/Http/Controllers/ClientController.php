@@ -103,4 +103,52 @@ class ClientController
         }
 
     }
+
+    public function verifyEmail(Request $request)
+    {
+        try {
+            $client = $request->user('client');
+            $this->clientService->verifyEmail($client);
+
+            return response()->json(['message' => 'Código de verificación enviado'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al enviar el código de verificación', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function verifyCode(Request $request)
+    {
+        try {
+            $request->validate([
+                'code' => 'required|string',
+            ]);
+
+            $client = $request->user('client');
+            $client = $this->clientService->verifyCode($client, $request->code);
+
+            return response()->json($client, 200);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al verificar la cuenta con el código', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al verificar la cuenta con el código', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updatePhone(Request $request)
+    {
+        try {
+            $client = $request->user('client');
+            $validated = $request->validate([
+                'phone_number' => 'required|string',
+            ]);
+
+            $client = $this->clientService->updatePhone($client, $validated);
+
+            return response()->json($client, 200);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al actualizar el número de teléfono', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar el número de teléfono', 'error' => $e->getMessage()], 500);
+        }
+    }
 }

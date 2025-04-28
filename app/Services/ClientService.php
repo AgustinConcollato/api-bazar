@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Mail\ClientEmailVerificationCode;
 use App\Models\Client;
+use ErrorException;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class ClientService
 {
@@ -49,5 +52,51 @@ class ClientService
         $clients = Client::with('address')->get();
 
         return $clients;
+    }
+
+    public function verifyEmail($client)
+    {
+        $code = random_int(100000, 999999);
+
+        $client["email_verification_code"] = $code;
+        $client["email_verification_expires_at"] = now()->addMinutes(20);
+        $client->save();
+
+        $data = [
+            'code' => $code,
+            'name' => $client->name,
+        ];
+
+        Mail::to($client->email)->send(new ClientEmailVerificationCode($data));
+    }
+
+    public function verifyCode($client, $code)
+    {
+        if (!$client->email_verification_code || !$client->email_verification_expires_at) {
+            throw new ErrorException('not code', 400);
+        }
+
+        if (now()->greaterThan($client->email_verification_expires_at)) {
+            throw new ErrorException('code expired', 400);
+        }
+
+        if ($client->email_verification_code !== $code) {
+            throw new ErrorException('invalid code', 400);
+        }
+
+        $client->email_verified_at = now();
+        $client->email_verification_code = null;
+        $client->email_verification_expires_at = null;
+        $client->save();
+
+        return $client;
+    }
+
+    public function updatePhone($client, $validated)
+    {
+        $client->phone_number = $validated['phone_number'];
+        $client->save();
+
+        return $client;
     }
 }

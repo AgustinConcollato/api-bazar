@@ -29,7 +29,6 @@ class ClientAddressController
                 'province' => 'required|string',
                 'city' => 'required|string',
                 'address' => 'required|string',
-                'code' => 'required|string',
                 'address_number' => 'required|string',
             ]);
 
@@ -46,7 +45,7 @@ class ClientAddressController
     }
     public function update(Request $request, $userId)
     {
-        $code = $request->input('code');
+        $id = $request->input('id');
 
         $address = ClientAddress::where('client_id', $userId)
             ->where('status', 'selected')
@@ -55,7 +54,7 @@ class ClientAddressController
         $address->update(['status' => null]);
 
         $newAddress = ClientAddress::where('client_id', $userId)
-            ->where('code', $code)
+            ->where('id', $id)
             ->first();
 
         $newAddress->update(['status' => 'selected']);
@@ -63,5 +62,36 @@ class ClientAddressController
         $addresses = ClientAddress::where('client_id', $userId)->get();
 
         return response()->json($addresses);
+    }
+
+    public function delete(Request $request, $addressId)
+    {
+        $client = $request->user('client');
+        $address = ClientAddress::find($addressId);
+
+        if (!$address) {
+            return response()->json(['message' => 'Dirección no encontrada'], 404);
+        }
+
+        // Verificar si el status de la dirección es 'selected'
+        if ($address->status === 'selected') {
+            // Buscar la primera dirección que queda después de eliminar esta
+            $nextAddress = ClientAddress::whereNull('status')
+                ->where('client_id', $client->id)
+                ->first();
+
+            // Si encontramos una dirección, actualizar su status a 'selected'
+            if ($nextAddress) {
+                $nextAddress->status = 'selected';
+                $nextAddress->save();
+            }
+        }
+
+        $address->delete();
+
+        $addresses = ClientAddress::where('client_id', $client->id)->get();
+
+        return response()->json($addresses, 200);
+
     }
 }
