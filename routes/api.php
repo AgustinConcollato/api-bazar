@@ -44,6 +44,7 @@ Route::post('/cart', [ShoppingCartController::class, 'add']);
 Route::post('/cart/confirm', [ShoppingCartController::class, 'confirm']);
 
 Route::get('/cart/{id}', [ShoppingCartController::class, 'get']);
+Route::get('/cart/detail/{id}', [ShoppingCartController::class, 'getDetail']);
 
 Route::put('/cart', [ShoppingCartController::class, 'update']);
 
@@ -62,8 +63,14 @@ Route::put('/user/{userId}', [ClientAddressController::class, 'update']);
 Route::middleware(['web'])->get('/clients/auth', [ClientController::class, 'auth']);
 
 Route::middleware(['auth:client', EnsureClient::class])->group(function () {
-    
-    Route::post('clients/logout', [ClientController::class, 'logout']);
+
+    Route::post('/clients/logout', [ClientController::class, 'logout']);
+    Route::put('/clients/update/phone', [ClientController::class, 'updatePhone']);
+    Route::delete('/address/{addressId}', [ClientAddressController::class, 'delete']);
+
+    Route::post('/mail/verify', [ClientController::class, 'verifyEmail']);
+    Route::post('/mail/verify-code', [ClientController::class, 'verifyCode']);
+
 });
 
 
