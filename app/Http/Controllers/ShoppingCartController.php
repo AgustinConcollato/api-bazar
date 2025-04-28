@@ -59,6 +59,13 @@ class ShoppingCartController
         return response()->json($shoppingCart);
     }
 
+    public function getDetail($id)
+    {
+        $shoppingCart = ShoppingCart::where('client_id', $id)->get();
+
+        return response()->json($shoppingCart);
+    }
+
     public function update(Request $request)
     {
 
