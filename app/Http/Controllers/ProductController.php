@@ -108,11 +108,12 @@ class ProductController
         }
 
         if ($date) {
-            $query->where('created_at', '>=', $date);
+            // buscar los productos que se crearon en los ultimos 30 dias
+            $products = $query->where('created_at', '>=', now()->subDays(30))
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
 
-            // $products = $query->orderBy('created_at', 'desc')->paginate(10);
-
-            // return response()->json($products);
+            return response()->json($products);
         }
 
         if ($views) {
