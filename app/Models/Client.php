@@ -31,7 +31,6 @@ class Client extends Authenticatable
         'password',
         'remember_token',
         'email_verification_code',
-        'source',
         'email_verification_expires_at'
     ];
 
