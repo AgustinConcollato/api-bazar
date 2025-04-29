@@ -96,7 +96,7 @@ class ProductController
         }
 
         if ($name) {
-            $query->where('name', 'like', '%' . $name . '%');
+            $query->whereRaw("MATCH(name) AGAINST(? IN NATURAL LANGUAGE MODE)", [$name]);
         }
 
         if (!$panel) {
