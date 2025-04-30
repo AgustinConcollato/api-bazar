@@ -96,7 +96,13 @@ class ProductController
         }
 
         if ($name) {
-            $query->whereRaw("MATCH(name) AGAINST(? IN NATURAL LANGUAGE MODE)", [$name]);
+            $query->whereRaw("MATCH(name) AGAINST(? IN BOOLEAN MODE)", ['"' . $name . '"'])
+                ->orWhere(function ($q) use ($name) {
+                    $keywords = explode(' ', $name);
+                    foreach ($keywords as $word) {
+                        $q->where('name', 'like', '%' . $word . '%');
+                    }
+                });
         }
 
         if (!$panel) {
