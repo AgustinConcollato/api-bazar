@@ -74,6 +74,37 @@ class ProductService
 
     }
 
+    public function relatedProducts($productId)
+    {
+        $product = Product::findOrFail($productId);
+
+        // Obtener subcategorías como array
+        $subcategories = explode('|', $product->subcategory_code);
+
+        // Dividir el nombre en palabras clave
+        $keywords = collect(explode(' ', $product->name))
+            ->filter(fn($word) => strlen($word) > 3); // ignorar palabras cortas
+
+        $query = Product::where('id', '!=', $product->id)
+            ->where('status', 'active')
+            ->where('category_code', $product->category_code)
+            // ->where(function ($q) use ($subcategories) {
+            //     foreach ($subcategories as $subcat) {
+            //         $q->orWhere('subcategory_code', 'like', '%' . $subcat . '%');
+            //     }
+            // })
+            ->where(function ($q) use ($keywords) {
+                foreach ($keywords as $word) {
+                    $q->orWhere('name', 'like', '%' . $word . '%');
+                }
+            })
+            ->orderBy('views', 'desc') // o por created_at si preferís
+            ->limit(10)
+            ->get();
+
+        return $query;
+    }
+
     public function updateImages($validated, $id)
     {
 

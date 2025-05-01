@@ -136,6 +136,17 @@ class ProductController
 
         return response()->json($products);
     }
+
+    public function relatedProducts($productId)
+    {
+        try {
+            $products = $this->productService->relatedProducts($productId);
+            return response()->json($products);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al obtener productos relacionados', 'error' => $e->getMessage()]);
+        }
+    }
+    
     public function update(Request $request, $id)
     {
         try {
