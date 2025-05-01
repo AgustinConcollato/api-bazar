@@ -187,7 +187,7 @@ class OrderController
         $order = Order::find($id);
         $order->update(['status' => 'accepted']);
 
-        return response()->json(Config::get('api-responses.success.default'));
+        return response()->json($order);
     }
 
     public function reject($id)
