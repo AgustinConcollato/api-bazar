@@ -58,6 +58,7 @@ Route::get('/user/{userId}', [ClientAddressController::class, 'get']);
 Route::post('/user', [ClientAddressController::class, 'add']);
 Route::put('/user/{userId}', [ClientAddressController::class, 'update']);
 
+Route::get('/products/related/{productId}', [ProductController::class, 'relatedProducts']);
 
 // Route::get('/clients/auth', [ClientController::class, 'auth']);
 Route::middleware(['web'])->get('/clients/auth', [ClientController::class, 'auth']);
