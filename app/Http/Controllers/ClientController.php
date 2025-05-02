@@ -44,24 +44,32 @@ class ClientController
     public function register(Request $request)
     {
         try {
-            $validated = $request->validate([
+            $source = $request->input('source', 'web');
+
+            $rules = [
                 'name' => 'required|string|max:100',
-                'email' => [
-                    'required',
-                    'email',
-                    Rule::unique('clients')->where(fn($query) => $query->where('source', 'web')),
-                ],
+                'source' => 'nullable|in:web,dashboard',
                 'password' => [
                     'required',
                     'confirmed',
-                    Password::min(8)
-                        ->letters()
-                        ->mixedCase()
-                        ->numbers()
-                        ->symbols()
+                    Password::min(8)->letters()->mixedCase()->numbers()->symbols(),
                 ],
                 'phone_number' => 'nullable|string|max:20',
-            ]);
+            ];
+
+            // Si es web, requerimos email único dentro de web
+            if ($source === 'web') {
+                $rules['email'] = [
+                    'required',
+                    'email',
+                    Rule::unique('clients')->where(fn($query) => $query->where('source', 'web')),
+                ];
+            } else {
+                // En dashboard el email puede ser null
+                $rules['email'] = ['nullable', 'email'];
+            }
+
+            $validated = $request->validate($rules);
 
             $client = $this->clientService->register($validated);
 

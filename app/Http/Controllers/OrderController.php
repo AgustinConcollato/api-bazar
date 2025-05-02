@@ -44,7 +44,7 @@ class OrderController
         if ($id) {
             $orders = Order::where('status', 'pending')
                 ->with('payments')
-                ->where('client', $id)
+                ->where('client_id', $id)
                 ->orderBy('created_at', 'asc')
                 ->get();
         } else {
@@ -56,13 +56,14 @@ class OrderController
 
         return response()->json($orders);
     }
+
     public function getOrdersAccepted($id = null)
     {
         try {
             if ($id) {
                 $orders = Order::where('status', 'accepted')
                     ->with('payments')
-                    ->where('client', $id)
+                    ->where('client_id', $id)
                     ->orderBy('updated_at', 'asc')
                     ->get();
             } else {
@@ -79,26 +80,31 @@ class OrderController
         }
     }
 
-    public function completed(Request $request, $id = null)
+    public function get(Request $request)
     {
+        try {
 
-        $validated = $request->validate([
-            'year' => 'required|integer|min:2000|max:' . date('Y'),
-            'month' => 'nullable|integer|min:1|max:12', // El mes es opcional
-        ]);
+            $validated = $request->validate([
+                'year' => 'nullable|integer|min:2000|max:' . date('Y'),
+                'month' => 'nullable|integer|min:1|max:12', // El mes es opcional
+                'status' => 'nullable|string|in:pending,completed,cancelled,accepted,rejected',
+                'client_id' => 'nullable|string|exists:clients,id'
+            ]);
 
-        $orders = $this->orderService->getCompleted($validated, $id);
+            $user = $request->user('client');
+            $id = $user->id ?? $validated['client_id'] ?? null;
 
-        return response()->json($orders);
-    }
+            $validated['client_id'] = $id;
 
-    public function get($userId)
-    {
-        $orders = Order::where('client_id', $userId)
-            ->orderBy('updated_at', 'desc')
-            ->get();
+            $orders = $this->orderService->get($validated);
 
-        return response()->json($orders);
+            return response()->json($orders);
+
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al obtener los pedidos', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            return response()->json(['message' => 'Error al obtener los pedidos', 'error' => $e->getMessage()]);
+        }
     }
 
     public function detail($id)
@@ -171,7 +177,9 @@ class OrderController
         $order = Order::find($id);
         $order->update(['status' => 'cancelled']);
 
-        return response()->json(Config::get('api-responses.success.deleted'));
+        $orders = $this->orderService->get(['status' => 'accepted']);
+
+        return response()->json($orders);
     }
 
     public function complete($id)
@@ -195,10 +203,7 @@ class OrderController
         $order = Order::find($id);
         $order->update(['status' => 'rejected']);
 
-        $orders = Order::where('status', 'pending')
-            ->with('payments')
-            ->orderBy('created_at', 'asc')
-            ->get();
+        $orders = $this->orderService->get(['status' => 'pending']);
 
         return response()->json($orders);
     }

@@ -27,12 +27,7 @@ Route::get('/categories/{code}', [CategoriesController::class, 'category']);
 
 Route::get('/order/pdf/{id}', [OrderController::class, 'pdf']);
 
-Route::get('/order/pending/{id}', [OrderController::class, 'getOrdersPending']);
-
-Route::get('/order/accepted/{id}', [OrderController::class, 'getOrdersAccepted']);
-
-Route::get('/order/completed', [OrderController::class, 'completed']);
-Route::get('/order/completed/{id}', [OrderController::class, 'completed']);
+Route::get('/order/completed', [OrderController::class, 'get']);
 
 Route::get('/order/detail/{id}', [OrderController::class, 'detail']);
 
@@ -84,14 +79,14 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
 
     Route::get('/clients', [ClientController::class, 'get']);
 
-    Route::get('/order/pending', [OrderController::class, 'getOrdersPending']);
-    Route::get('/order/accepted', [OrderController::class, 'getOrdersAccepted']);
+    Route::get('/order', [OrderController::class, 'get']);
 
     Route::put('/order/complete/{id}', [OrderController::class, 'complete']);
     Route::put('/order/product', [OrderController::class, 'update']);
 
     Route::put('/order/accept/{id}', [OrderController::class, 'accept']);
     Route::put('/order/reject/{id}', [OrderController::class, 'reject']);
+    Route::delete('/order/cancel/{id}', [OrderController::class, 'cancel']);
 
     Route::delete('/order/product/remove', [OrderController::class, 'remove']);
 
@@ -113,8 +108,6 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
 
     Route::post('/order', [OrderController::class, 'create']);
     Route::post('/order/product/add', [OrderController::class, 'add']);
-
-    Route::delete('/order/cancel/{id}', [OrderController::class, 'cancel']);
 
     Route::get('/analytics/net-profit', [AnalyticsController::class, 'netProfit']);
 

@@ -66,26 +66,32 @@ class OrderService
         }
     }
 
-    public function getCompleted($validated, $id)
+    public function get($validated)
     {
+        $query = Order::query()->with('payments');
 
-        $query = Order::where('status', 'completed')
-            ->with('payments')
-            ->whereYear('updated_at', $validated['year']);
+        // Si se especificó un estado (status), aplicarlo
+        if (!empty($validated['status'])) {
+            $query->where('status', $validated['status']);
+        }
 
-        // Si se envió un mes, también filtramos por mes
+        // Si se especificó un año, aplicarlo
+        if (!empty($validated['year'])) {
+            $query->whereYear('updated_at', $validated['year']);
+        }
+
+        // Si se especificó un mes, aplicarlo
         if (!empty($validated['month'])) {
             $query->whereMonth('updated_at', $validated['month']);
         }
 
-        // Si se envió un `client_id`, filtramos por cliente
-        if ($id) {
-            $query->where('client_id', $id);
+        // Si se especificó un client_id, usar ese (para admin o dashboard),
+        // sino usar el ID del cliente autenticado (para cliente en web)
+        if (!empty($validated['client_id'])) {
+            $query->where('client_id', $validated['client_id']);
         }
 
-        // Obtener los resultados
-        $orders = $query->orderBy('updated_at', 'desc')->get();
-
-        return $orders;
+        return $query->orderBy('updated_at', 'desc')->get();
     }
+
 }

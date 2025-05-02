@@ -31,8 +31,10 @@ class ClientService
         $validated['password'] = Hash::make($password);
         $newClient = Client::create($validated);
 
-        if ($newClient) {
+        if ($newClient && $validated['source'] === 'web') {
             return $this->login([...$validated, 'password' => $password]);
+        } else {
+            return $newClient;
         }
     }
 
