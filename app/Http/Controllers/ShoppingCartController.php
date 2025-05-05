@@ -98,7 +98,7 @@ class ShoppingCartController
     {
         try {
             $validated = $request->validate([
-                'client_id' => 'required', // |uuid|exists:clients,id
+                'client_id' => 'required|uuid|exists:clients,id',
                 'user_name' => 'required|string|max:100',
                 'comment' => 'nullable|string|max:300',
                 'address' => 'required|array',
@@ -114,6 +114,22 @@ class ShoppingCartController
 
             if ($cartItems->isEmpty()) {
                 return response()->json(['message' => 'El carrito está vacío'], 400);
+            }
+
+            foreach ($cartItems as $item) {
+                $product = Product::find($item->product_id);
+
+                if ($product->discount) {
+                    $discount = $product->discount;
+                    $subtotal = $item->quantity * ($product->price - ($product->price * $discount) / 100);
+                } else {
+                    $discount = 0;
+                    $subtotal = $item->quantity * $product->price;
+                }
+
+                if ($subtotal < 150000) {
+                    throw new \Exception("Compra minima por la web es de $150000", 422);
+                }
             }
 
             $order = Order::create([
@@ -203,13 +219,13 @@ class ShoppingCartController
             ]);
         } catch (ValidationException $e) {
             return response()->json([
-                'error' => 'Error de confirmar el pedido',
-                'message' => $e->validator->errors(),
+                'message' => 'Error de confirmar el pedido',
+                'errors' => $e->validator->errors(),
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Error al confirmar el pedido',
-                'message' => $e->getMessage(),
+                'message' => 'Error al confirmar el pedido',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
