@@ -285,8 +285,8 @@ class ProductService
         // Crear una imagen en blanco para la miniatura
         $thumbnail = imagecreatetruecolor($newWidth, $newHeight);
 
-        // Manejar transparencia para PNG
-        if ($type == IMAGETYPE_PNG) {
+        // Manejar transparencia para PNG y WebP
+        if ($type == IMAGETYPE_PNG || $type == IMAGETYPE_WEBP) {
             // Habilitar la mezcla alfa y configurar el fondo transparente
             imagealphablending($thumbnail, false);
             imagesavealpha($thumbnail, true);
@@ -306,7 +306,7 @@ class ProductService
                 imagepng($thumbnail, $destPath);
                 break;
             case IMAGETYPE_WEBP:
-                imagewebp($thumbnail, $destPath);
+                imagewebp($thumbnail, $destPath, 100); // Añadido calidad 100 para mejor preservación de transparencia
                 break;
         }
 
