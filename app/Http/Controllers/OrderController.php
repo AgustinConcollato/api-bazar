@@ -39,54 +39,13 @@ class OrderController
         }
     }
 
-    public function getOrdersPending($id = null)
-    {
-        if ($id) {
-            $orders = Order::where('status', 'pending')
-                ->with('payments')
-                ->where('client_id', $id)
-                ->orderBy('created_at', 'asc')
-                ->get();
-        } else {
-            $orders = Order::where('status', 'pending')
-                ->with('payments')
-                ->orderBy('created_at', 'asc')
-                ->get();
-        }
-
-        return response()->json($orders);
-    }
-
-    public function getOrdersAccepted($id = null)
-    {
-        try {
-            if ($id) {
-                $orders = Order::where('status', 'accepted')
-                    ->with('payments')
-                    ->where('client_id', $id)
-                    ->orderBy('updated_at', 'asc')
-                    ->get();
-            } else {
-                $orders = Order::where('status', 'accepted')
-                    ->with('payments')
-                    ->orderBy('updated_at', 'asc')
-                    ->get();
-            }
-
-            return response()->json($orders);
-
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al obtener los pedidos', 'error' => $e->getMessage()]);
-        }
-    }
-
     public function get(Request $request)
     {
         try {
 
             $validated = $request->validate([
                 'year' => 'nullable|integer|min:2000|max:' . date('Y'),
-                'month' => 'nullable|integer|min:1|max:12', // El mes es opcional
+                'month' => 'nullable|integer|min:1|max:12',
                 'status' => 'nullable|string|in:pending,completed,cancelled,accepted,rejected',
                 'client_id' => 'nullable|string|exists:clients,id'
             ]);
