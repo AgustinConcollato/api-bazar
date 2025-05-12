@@ -44,14 +44,18 @@ class ClientService
         $client->currentAccessToken()->delete();
     }
 
-    public function get($id = null)
+    public function get($id = null, $source)
     {
         if ($id) {
             $client = Client::where(['id' => $id])->with('address');
             return $client;
         }
 
-        $clients = Client::with('address')->get();
+        if ($source) {
+            $clients = Client::where('source', $source)->with('address')->get();
+        } else {
+            $clients = Client::with('address')->get();
+        }
 
         return $clients;
     }
