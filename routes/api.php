@@ -46,7 +46,8 @@ Route::put('/cart', [ShoppingCartController::class, 'update']);
 Route::delete('/cart/{user}/{id}', [ShoppingCartController::class, 'delete']);
 
 // Route::get('/clients/{id}', [ClientController::class, 'get']);
-Route::post('/clients/register', [ClientController::class, 'register']);
+Route::post('/clients/register/panel', [ClientController::class, 'registerPanel']);
+Route::post('/clients/register/web', [ClientController::class, 'registerWeb']);
 Route::post('/clients/login', [ClientController::class, 'login']);
 
 Route::get('/user/{userId}', [ClientAddressController::class, 'get']);
@@ -55,7 +56,6 @@ Route::put('/user/{userId}', [ClientAddressController::class, 'update']);
 
 Route::get('/products/related/{productId}', [ProductController::class, 'relatedProducts']);
 
-// Route::get('/clients/auth', [ClientController::class, 'auth']);
 Route::middleware(['web'])->get('/clients/auth', [ClientController::class, 'auth']);
 
 Route::middleware(['auth:client', EnsureClient::class])->group(function () {
@@ -66,11 +66,10 @@ Route::middleware(['auth:client', EnsureClient::class])->group(function () {
 
     Route::post('/mail/verify', [ClientController::class, 'verifyEmail']);
     Route::post('/mail/verify-code', [ClientController::class, 'verifyCode']);
+    
+    Route::get('/order/client', [OrderController::class, 'get']);
 
-});
-
-
-Route::middleware(['auth:sanctum', EnsureClientOwnsResource::class])->group(function () {
+    Route::put('/clients/update/email', [ClientController::class, 'updateEmail']);
 
 });
 
@@ -110,5 +109,6 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
     Route::post('/order/product/add', [OrderController::class, 'add']);
 
     Route::get('/analytics/net-profit', [AnalyticsController::class, 'netProfit']);
-
+    Route::get('/analytics/compare-with-previous-month', [AnalyticsController::class, 'compareWithPreviousMonth']);
+    Route::get('/analytics/resume', [AnalyticsController::class, 'resume']);
 });
