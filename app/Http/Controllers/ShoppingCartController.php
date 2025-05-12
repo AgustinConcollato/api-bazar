@@ -116,20 +116,22 @@ class ShoppingCartController
                 return response()->json(['message' => 'El carrito está vacío'], 400);
             }
 
+            $totalPrice = 0;
             foreach ($cartItems as $item) {
                 $product = Product::find($item->product_id);
 
                 if ($product->discount) {
                     $discount = $product->discount;
-                    $subtotal = $item->quantity * ($product->price - ($product->price * $discount) / 100);
+                    $checkPrice = $item->quantity * ($product->price - ($product->price * $discount) / 100);
                 } else {
                     $discount = 0;
-                    $subtotal = $item->quantity * $product->price;
+                    $checkPrice = $item->quantity * $product->price;
                 }
+                $totalPrice += $checkPrice;
+            }
 
-                if ($subtotal < 150000) {
-                    throw new \Exception("Compra minima por la web es de $150000", 422);
-                }
+            if ($totalPrice < 150000) {
+                throw new \Exception("Compra minima por la web es de $150000", 422);
             }
 
             $order = Order::create([
@@ -210,7 +212,6 @@ class ShoppingCartController
                 $payment = $this->paymentService->createPayment($data);
                 $payments[] = $payment;
             }
-
 
             return response()->json([
                 'message' => 'Pedido confirmado',
