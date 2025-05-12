@@ -37,7 +37,6 @@ class OrderService
 
     public function add($validated)
     {
-
         $price = $validated['price'];
         $quantity = $validated['quantity'];
         $discount = $validated['discount'];
@@ -91,7 +90,10 @@ class OrderService
             $query->where('client_id', $validated['client_id']);
         }
 
-        return $query->orderBy('updated_at', 'desc')->get();
-    }
+        $query->orderBy('updated_at', 'desc');
 
+        $orders = $query->paginate(10);
+
+        return $orders;
+    }
 }

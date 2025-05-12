@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderProducts;
+use App\Models\Product;
 use App\Services\OrderService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -58,10 +59,9 @@ class OrderController
             $orders = $this->orderService->get($validated);
 
             return response()->json($orders);
-
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Error al obtener los pedidos', 'errors' => $e->errors()], 422);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return response()->json(['message' => 'Error al obtener los pedidos', 'error' => $e->getMessage()]);
         }
     }
@@ -144,6 +144,14 @@ class OrderController
     public function complete($id)
     {
         $order = Order::find($id);
+
+        // restar el valor de quantity de cada producto del pedido pero en la tabla de productos
+        $p = null;
+        foreach ($order->products as $product) {
+            $p = Product::find($product->product_id);
+            $p->update(['available_quantity' => $p->available_quantity - $product->quantity]);
+        }
+
         $order->update(['status' => 'completed']);
 
         return response()->json(Config::get('api-responses.success.default'));
@@ -167,10 +175,8 @@ class OrderController
         return response()->json($orders);
     }
 
-    public function pdf(Request $request, $id)
+    public function pdf($id)
     {
-        $date = $request->input('date');
-
         $order = Order::with('products')->find($id);
 
         $data = [
@@ -184,8 +190,7 @@ class OrderController
 
         $pdf = pdf::loadView('remit', $data);
 
-        return response($pdf->output(), 200)
-            ->header('Content-Type', 'application/pdf');
+        return response($pdf->output(), 200)->header('Content-Type', 'application/pdf');
     }
 
     public function update(Request $request)
