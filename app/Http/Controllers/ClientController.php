@@ -7,6 +7,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
+
 class ClientController
 {
     //implementar esta protección en los demas controladores 
@@ -23,17 +24,16 @@ class ClientController
             $client = $request->user('client');
 
             return response()->json(['client' => $client]);
-
         } catch (\Exception $e) {
             return response()->json(['message' => 'Cliente no autenticado', 'error' => $e->getMessage()], 500);
         }
     }
 
-    public function get($id = null)
+    public function get(Request $request, $id = null)
     {
-
         try {
-            $client = $this->clientService->get($id);
+            $source = $request->input('source', null);
+            $client = $this->clientService->get($id, $source);
 
             return response()->json($client);
         } catch (\Exception $e) {
@@ -41,35 +41,56 @@ class ClientController
         }
     }
 
-    public function register(Request $request)
+    public function registerWeb(Request $request)
     {
         try {
-            $source = $request->input('source', 'web');
-
-            $rules = [
+            $validated = $request->validate([
                 'name' => 'required|string|max:100',
-                'source' => 'nullable|in:web,dashboard',
+                'email' => [
+                    'required',
+                    'email',
+                    Rule::unique('clients')->where(fn($query) => $query->where('source', 'web')),
+                ],
+                'password' => [
+                    'required',
+                    'confirmed',
+                    Password::min(8)
+                        ->letters()
+                        ->mixedCase()
+                        ->numbers()
+                        ->symbols()
+                ],
+                'phone_number' => 'nullable|string|max:20',
+            ]);
+
+            $validated['source'] = 'web';
+
+            $client = $this->clientService->register($validated);
+
+            return response()->json($client, 201);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al registrarse', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al registrarse', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function registerPanel(Request $request)
+    {
+        try {
+
+            $validated =  $request->validate([
+                'name' => 'required|string|max:100',
                 'password' => [
                     'required',
                     'confirmed',
                     Password::min(8)->letters()->mixedCase()->numbers()->symbols(),
                 ],
                 'phone_number' => 'nullable|string|max:20',
-            ];
+                'email' => 'nullable|email',
+            ]);
 
-            // Si es web, requerimos email único dentro de web
-            if ($source === 'web') {
-                $rules['email'] = [
-                    'required',
-                    'email',
-                    Rule::unique('clients')->where(fn($query) => $query->where('source', 'web')),
-                ];
-            } else {
-                // En dashboard el email puede ser null
-                $rules['email'] = ['nullable', 'email'];
-            }
-
-            $validated = $request->validate($rules);
+            $validated['source'] = 'dashboard';
 
             $client = $this->clientService->register($validated);
 
@@ -91,7 +112,6 @@ class ClientController
 
             $response = $this->clientService->login($validated);
             return response()->json($response, 200);
-
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Error al iniciar sesión', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
@@ -105,11 +125,9 @@ class ClientController
             $this->clientService->logout($request);
 
             return response()->json(['message' => 'Sesión cerrada con éxito'], 200);
-
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al cerrar sesión', 'error' => $e->getMessage()], 500);
         }
-
     }
 
     public function verifyEmail(Request $request)
@@ -157,6 +175,32 @@ class ClientController
             return response()->json(['message' => 'Error al actualizar el número de teléfono', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al actualizar el número de teléfono', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+
+    public function updateEmail(Request $request)
+    {
+        try {
+            $client = $request->user('client');
+
+            $validated = $request->validate([
+                'email' => [
+                    'required',
+                    'email',
+                    Rule::unique('clients')->where(fn($query) => $query->where('source', 'web'))->ignore($client->id)
+                ]
+            ]);
+
+            $client->email = $validated['email'];
+            $client->email_verified_at = null;
+            $client->save();
+
+            return response()->json(['message' => 'Correo actualizado con éxito', 'email' => $client->email]);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al actualizar el correo', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar el correo', 'error' => $e->getMessage()], 500);
         }
     }
 }
