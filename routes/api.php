@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ShoppingCartController;
 use App\Http\Controllers\ClientAddressController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Middleware\EnsureClient;
 use App\Http\Middleware\EnsureClientOwnsResource;
 use App\Http\Middleware\EnsureUser;
@@ -58,6 +59,10 @@ Route::get('/products/related/{productId}', [ProductController::class, 'relatedP
 
 Route::middleware(['web'])->get('/clients/auth', [ClientController::class, 'auth']);
 
+//
+// 
+//
+
 Route::middleware(['auth:client', EnsureClient::class])->group(function () {
 
     Route::post('/clients/logout', [ClientController::class, 'logout']);
@@ -66,12 +71,17 @@ Route::middleware(['auth:client', EnsureClient::class])->group(function () {
 
     Route::post('/mail/verify', [ClientController::class, 'verifyEmail']);
     Route::post('/mail/verify-code', [ClientController::class, 'verifyCode']);
-    
+
     Route::get('/order/client', [OrderController::class, 'get']);
 
     Route::put('/clients/update/email', [ClientController::class, 'updateEmail']);
-
 });
+
+//
+//
+//
+
+Route::get('/auth', [UserController::class, 'auth']);
 
 Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
     Route::post('/logout', [UserController::class, 'logout']);
@@ -111,4 +121,7 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
     Route::get('/analytics/net-profit', [AnalyticsController::class, 'netProfit']);
     Route::get('/analytics/compare-with-previous-month', [AnalyticsController::class, 'compareWithPreviousMonth']);
     Route::get('/analytics/resume', [AnalyticsController::class, 'resume']);
+
+    Route::post('/payments', [PaymentController::class, 'createPayment']);
+    Route::put('/payments/{id}', [PaymentController::class, 'updatePayment']);
 });
