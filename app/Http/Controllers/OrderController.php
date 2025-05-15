@@ -149,7 +149,10 @@ class OrderController
         $p = null;
         foreach ($order->products as $product) {
             $p = Product::find($product->product_id);
-            $p->update(['available_quantity' => $p->available_quantity - $product->quantity]);
+
+            if ($p) {
+                $p->update(['available_quantity' => $p->available_quantity - $product->quantity]);
+            }
         }
 
         $order->update(['status' => 'completed']);
