@@ -13,11 +13,11 @@ class UserService
     {
         Auth::guard('user')->attempt(['email' => $validated['email'], 'password' => $validated['password']]);
 
-        $client = Auth::guard('user')->user();
+        $user = Auth::guard('user')->user();
 
-        $token = $client->createToken('user_token')->plainTextToken;
+        $token = $user->createToken('user_token')->plainTextToken;
 
-        return ['token' => $token, 'client' => $client];
+        return ['token' => $token, 'user' => $user];
 
     }
 

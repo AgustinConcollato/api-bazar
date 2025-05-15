@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Services\UserService;
@@ -8,10 +9,21 @@ use Illuminate\Validation\ValidationException;
 class UserController
 {
     protected $userService;
-    
+
     public function __construct(UserService $userService)
     {
         $this->userService = $userService;
+    }
+
+    public function auth(Request $request)
+    {
+        try {
+            $user = $request->user('sanctum');
+
+            return response()->json(['user' => $user]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Usuario no autenticado', 'error' => $e->getMessage()], 500);
+        }
     }
 
     public function register(Request $request)
@@ -46,7 +58,6 @@ class UserController
                 'message' => 'Login exitoso',
                 ...$response
             ], 200);
-
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Error al iniciar sesión', 'error' => $e->errors()], 422);
         } catch (\Exception $e) {
@@ -59,10 +70,8 @@ class UserController
         try {
             $this->userService->logout($request);
             return response()->json(['message' => 'Sesión cerrada con éxito'], 200);
-
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al cerrar sesión', 'error' => $e->getMessage()], 500);
         }
-
     }
 }
