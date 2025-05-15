@@ -95,9 +95,9 @@
                 <tr>
                     <td>{{ $product['quantity'] }}</td>
                     <td>{{ $product['name'] }}</td>
-                    <td class="price">$ {{ $product['price'] }}</td>
+                    <td class="price">{{ $product['price'] }}</td>
                     <td class="price">{{ $product['discount'] ? $product['discount'] : 0 }}%</td>
-                    <td class="price">$ {{ $product['subtotal'] }}
+                    <td class="price">{{ $product['subtotal'] }}
                     </td>
                 </tr>
             @endforeach
