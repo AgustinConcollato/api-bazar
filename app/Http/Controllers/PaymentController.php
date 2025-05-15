@@ -31,14 +31,12 @@ final class PaymentController
                 'message' => 'Pago creado exitosamente',
                 'payment' => $payment
             ], 201);
-
         } catch (ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Error de validación',
                 'errors' => $e->errors()
             ], 422);
-
         } catch (\Exception $e) {
 
             return response()->json([
@@ -49,4 +47,28 @@ final class PaymentController
         }
     }
 
+    public function updatePayment(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'paid_amount' => 'required|numeric',
+            ]);
+
+            $payment = $this->paymentService->updatePayment($id, $validated);
+
+            return response()->json($payment);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al actualizar el pago',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

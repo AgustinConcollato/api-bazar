@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Payment;
+use Carbon\Carbon;
 
 class PaymentService
 {
@@ -27,5 +28,13 @@ class PaymentService
     public function getPaymentsByOrder($orderId)
     {
         return Payment::where('order_id', $orderId)->get();
+    }
+
+    public function updatePayment($id, $data)
+    {
+        $data['paid_at'] = Carbon::now();
+        $payment = Payment::find($id);
+        $payment->update($data);
+        return $payment;
     }
 }
