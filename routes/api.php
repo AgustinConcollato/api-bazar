@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\ClientController;
@@ -11,7 +12,6 @@ use App\Http\Controllers\ShoppingCartController;
 use App\Http\Controllers\ClientAddressController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Middleware\EnsureClient;
-use App\Http\Middleware\EnsureClientOwnsResource;
 use App\Http\Middleware\EnsureUser;
 use Illuminate\Support\Facades\Route;
 
@@ -46,7 +46,6 @@ Route::put('/cart', [ShoppingCartController::class, 'update']);
 
 Route::delete('/cart/{user}/{id}', [ShoppingCartController::class, 'delete']);
 
-// Route::get('/clients/{id}', [ClientController::class, 'get']);
 Route::post('/clients/register/panel', [ClientController::class, 'registerPanel']);
 Route::post('/clients/register/web', [ClientController::class, 'registerWeb']);
 Route::post('/clients/login', [ClientController::class, 'login']);
@@ -56,6 +55,13 @@ Route::post('/user', [ClientAddressController::class, 'add']);
 Route::put('/user/{userId}', [ClientAddressController::class, 'update']);
 
 Route::get('/products/related/{productId}', [ProductController::class, 'relatedProducts']);
+
+Route::get('/campaigns', [CampaignController::class, 'get']);
+Route::get('/campaigns/{slug}', [CampaignController::class, 'get']);
+
+//
+//
+//
 
 Route::middleware(['web'])->get('/clients/auth', [ClientController::class, 'auth']);
 
@@ -84,7 +90,11 @@ Route::middleware(['auth:client', EnsureClient::class])->group(function () {
 Route::get('/auth', [UserController::class, 'auth']);
 
 Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
+    
     Route::post('/logout', [UserController::class, 'logout']);
+
+    Route::post('/campaigns', [CampaignController::class, 'create']);
+    Route::post('/campaigns/{campaignId}/products', [CampaignController::class, 'addProducts']);
 
     Route::get('/clients', [ClientController::class, 'get']);
 
