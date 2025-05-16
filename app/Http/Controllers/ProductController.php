@@ -11,6 +11,9 @@ use Illuminate\Validation\ValidationException;
 class ProductController
 {
 
+    protected $productService;
+    protected $providerService;
+    
     public function __construct(ProductService $productService, ProviderService $providerService)
     {
         $this->productService = $productService;
@@ -96,13 +99,15 @@ class ProductController
         }
 
         if ($name) {
-            $query->whereRaw("MATCH(name) AGAINST(? IN BOOLEAN MODE)", ['"' . $name . '"'])
-                ->orWhere(function ($q) use ($name) {
-                    $keywords = explode(' ', $name);
-                    foreach ($keywords as $word) {
-                        $q->where('name', 'like', '%' . $word . '%');
-                    }
-                });
+            $query->where(function($q) use ($name) {
+                $q->whereRaw("MATCH(name) AGAINST(? IN BOOLEAN MODE)", ['"' . $name . '"'])
+                    ->orWhere(function ($q) use ($name) {
+                        $keywords = explode(' ', $name);
+                        foreach ($keywords as $word) {
+                            $q->where('name', 'like', '%' . $word . '%');
+                        }
+                    });
+            });
         }
 
         if (!$panel) {
