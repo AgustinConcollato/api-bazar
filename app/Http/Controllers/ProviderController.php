@@ -9,6 +9,8 @@ use Illuminate\Validation\ValidationException;
 
 class ProviderController
 {
+    protected $providerService;
+
     public function __construct(ProviderService $providerService)
     {
         $this->providerService = $providerService;

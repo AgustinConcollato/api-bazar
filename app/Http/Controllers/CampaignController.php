@@ -10,6 +10,7 @@ class CampaignController
 {
 
     protected $campaignsService;
+    
     public function __construct(CampaignsService $campaignsService)
     {
         $this->campaignsService = $campaignsService;

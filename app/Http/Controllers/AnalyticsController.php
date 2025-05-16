@@ -8,6 +8,7 @@ use Illuminate\Validation\ValidationException;
 
 final class AnalyticsController
 {
+    protected $analyticsService;
 
     public function __construct(AnalyticsService $analyticsService)
     {

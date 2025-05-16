@@ -10,6 +10,8 @@ use Illuminate\Validation\ValidationException;
 
 final class PaymentController
 {
+    protected $paymentService;
+
     public function __construct(PaymentService $paymentService)
     {
         $this->paymentService = $paymentService;

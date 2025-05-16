@@ -13,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class OrderController
 {
+
+    protected $orderService;
     public function __construct(OrderService $orderService)
     {
         $this->orderService = $orderService;

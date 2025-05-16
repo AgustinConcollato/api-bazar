@@ -13,11 +13,16 @@ use Illuminate\Validation\ValidationException;
 
 class ShoppingCartController
 {
+
+    protected $paymentService;
+    protected $providerService;
+
     public function __construct(PaymentService $paymentService, ProviderService $providerService)
     {
         $this->paymentService = $paymentService;
         $this->providerService = $providerService;
     }
+    
     public function add(Request $request)
     {
         $data = $request->validate([
