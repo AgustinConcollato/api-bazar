@@ -57,7 +57,7 @@ Route::put('/user/{userId}', [ClientAddressController::class, 'update']);
 Route::get('/products/related/{productId}', [ProductController::class, 'relatedProducts']);
 
 Route::get('/campaigns', [CampaignController::class, 'get']);
-Route::get('/campaigns/{slug}', [CampaignController::class, 'get']);
+Route::get('/campaigns/{slug}', [CampaignController::class, 'getBySlug']);
 
 //
 //
@@ -90,11 +90,14 @@ Route::middleware(['auth:client', EnsureClient::class])->group(function () {
 Route::get('/auth', [UserController::class, 'auth']);
 
 Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
-    
+
     Route::post('/logout', [UserController::class, 'logout']);
 
     Route::post('/campaigns', [CampaignController::class, 'create']);
+    Route::put('/campaigns/{campaignId}', [CampaignController::class, 'update']);
     Route::post('/campaigns/{campaignId}/products', [CampaignController::class, 'addProducts']);
+    Route::put('/campaigns/{campaignId}/{productId}', [CampaignController::class, 'updateProduct']);
+    Route::delete('/campaigns/{campaignId}/{productId}', [CampaignController::class, 'deleteProduct']);
 
     Route::get('/clients', [ClientController::class, 'get']);
 
