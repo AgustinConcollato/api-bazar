@@ -6,7 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class CampaignProduct extends Model
 {
-    protected $fillable = ['campaign_id', 'product_id', 'custom_discount_type', 'custom_discount_value'];
+    protected $fillable = [
+        'campaign_id', 
+        'product_id', 
+        'custom_discount_type', 
+        'custom_discount_value'
+    ];
     
     protected $table = 'campaign_product';
 

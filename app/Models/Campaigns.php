@@ -7,6 +7,11 @@ use Illuminate\Support\Str;
 
 class Campaigns extends Model
 {
+
+    protected $primaryKey = 'id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
         'name',
         'slug',
@@ -15,7 +20,12 @@ class Campaigns extends Model
         'discount_value',
         'start_date',
         'end_date',
-        'is_active'
+        'is_active',
+        'image'
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     public function products()
@@ -27,7 +37,7 @@ class Campaigns extends Model
     public static function boot()
     {
         parent::boot();
- 
+
         static::creating(function ($campaign) {
             $campaign->slug = Str::slug($campaign->name);
             $campaign->id = Str::uuid();

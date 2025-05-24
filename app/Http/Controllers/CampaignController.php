@@ -10,7 +10,7 @@ class CampaignController
 {
 
     protected $campaignsService;
-    
+
     public function __construct(CampaignsService $campaignsService)
     {
         $this->campaignsService = $campaignsService;
@@ -18,7 +18,8 @@ class CampaignController
 
     public function get(Request $request)
     {
-        $campaigns = $this->campaignsService->getCampaigns();
+        $stauts = $request->input("stauts") || false;
+        $campaigns = $this->campaignsService->getCampaigns($stauts);
         return response()->json($campaigns);
     }
 
@@ -29,18 +30,19 @@ class CampaignController
     }
 
     public function create(Request $request)
-    {   
+    {
         try {
-            $validared = $request->validate([
+            $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'discount_type' => 'nullable|string',
                 'discount_value' => 'nullable|numeric',
                 'start_date' => 'required|date',
-                'end_date' => 'required|date'
+                'end_date' => 'required|date|after:start_date',
+                'image'=> 'required|mimes:jpeg,png,jpg,webp,svg|max:2048',
             ]);
 
-            $campaign = $this->campaignsService->createCampaign($validared);
+            $campaign = $this->campaignsService->createCampaign($validated, $request);
             return response()->json($campaign);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -53,11 +55,13 @@ class CampaignController
     {
         try {
             $validated = $request->validate([
-                'product_ids' => 'required|array',
-                'product_ids.*' => 'string|exists:products,id',
+                'products' => 'required|array',
+                'products.*.product_id' => 'required|string|exists:products,id',
+                'products.*.discount_type' => 'nullable|string|in:fixed,percentage',
+                'products.*.discount_value' => 'nullable|numeric|min:0'
             ]);
 
-            $products = $this->campaignsService->addProductsToCampaign($campaignId, $validated['product_ids']);
+            $products = $this->campaignsService->addProductsToCampaign($campaignId, $validated['products']);
 
             return response()->json($products);
         } catch (ValidationException $e) {
@@ -67,4 +71,60 @@ class CampaignController
         }
     }
 
+    public function updateProduct(Request $request, $campaignId, $productId)
+    {
+        try {
+
+            $product = $this->campaignsService->updateProductToCampaign($campaignId, $productId, $request->all());
+
+            return response()->json($product);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteProduct($campaignId, $productId)
+    {
+        try {
+
+            $product = $this->campaignsService->deleteProductToCampaign($campaignId, $productId);
+
+            return response()->json($product);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function update(Request $request, $campaignId)
+    {
+        try {
+            $validated = $request->validate([
+                'name' => 'nullable|string|max:255',
+                'description' => 'nullable|string',
+                'discount_type' => 'nullable|string',
+                'discount_value' => 'nullable|numeric',
+                'start_date' => 'nullable|date',
+                'end_date' => 'nullable|date|after:start_date',
+                'is_active' => 'nullable|string',
+                'image' => 'nullable|string'
+            ]);
+
+            $campaign = $this->campaignsService->updateCampaign($campaignId, $validated);
+            return response()->json($campaign);
+        } catch (ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // public function delete($campaignId)
+    // {
+    //     try {
+    //         $campaign = $this->campaignsService->deleteCampaign($campaignId);
+    //         return response()->json($campaign);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['errors'=> $e->getMessage()], 500);
+    //     }
+    // }
 }
