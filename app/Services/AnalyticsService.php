@@ -92,9 +92,9 @@ final class AnalyticsService
         }
 
         $orders = Order::where('status', 'completed')
-            ->whereYear('created_at', $previousYear)
+            ->whereYear('updated_at', $previousYear)
             ->when(isset($validated['month']), function ($query) use ($validated) {
-                return $query->whereMonth('created_at', $validated['month']);
+                return $query->whereMonth('updated_at', $validated['month']);
             })
             ->get();
 
