@@ -21,10 +21,11 @@ return new class extends Migration
             $table->dateTime('start_date');
             $table->dateTime('end_date');
             $table->boolean('is_active')->default(false);
+            $table->string('image', 500);
             $table->timestamps();
         });
     }
-    
+
 
     /**
      * Reverse the migrations.
