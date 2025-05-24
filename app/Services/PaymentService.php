@@ -13,8 +13,8 @@ class PaymentService
             'order_id' => $validated['order_id'],
             'method' => $validated['method'],
             'expected_amount' => $validated['expected_amount'],
-            'paid_amount' => $validated['paid_amount'],
-            'paid_at' => $validated['paid_at'],
+            'paid_amount' => $validated['paid_amount'] ?? null,
+            'paid_at' => $validated['paid_at'] ?? null,
         ]);
 
         return $payment;

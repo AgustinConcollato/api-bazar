@@ -24,7 +24,9 @@ final class PaymentController
             $validated = $request->validate([
                 'order_id' => 'required|string',
                 'method' => 'required|string',
-                'amount' => 'required|numeric',
+                'expected_amount' => 'required|numeric',
+                'paid_amount' => 'nullable|numeric',
+                'paid_at' => 'nullable|date',
             ]);
 
             $payment = $this->paymentService->createPayment($validated);
