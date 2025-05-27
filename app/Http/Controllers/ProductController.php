@@ -13,7 +13,7 @@ class ProductController
 
     protected $productService;
     protected $providerService;
-    
+
     public function __construct(ProductService $productService, ProviderService $providerService)
     {
         $this->productService = $productService;
@@ -88,7 +88,9 @@ class ProductController
         $price = $request->input('price');
         $status = $request->input('status');
 
-        $query = Product::with('providers');
+        $query = $panel
+            ? Product::with('providers')
+            : Product::query();
 
         if ($category) {
             $query->where('category_code', $category);
@@ -99,7 +101,7 @@ class ProductController
         }
 
         if ($name) {
-            $query->where(function($q) use ($name) {
+            $query->where(function ($q) use ($name) {
                 $q->whereRaw("MATCH(name) AGAINST(? IN BOOLEAN MODE)", ['"' . $name . '"'])
                     ->orWhere(function ($q) use ($name) {
                         $keywords = explode(' ', $name);
@@ -151,7 +153,7 @@ class ProductController
             return response()->json(['message' => 'Error al obtener productos relacionados', 'error' => $e->getMessage()]);
         }
     }
-    
+
     public function update(Request $request, $id)
     {
         try {
