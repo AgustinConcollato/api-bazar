@@ -234,6 +234,11 @@ class OrderController
 
             $order->total_amount += $product->subtotal;
             $order->save();
+
+            $payment = $order->payments()->first();
+            if ($payment) {
+                $payment->update(['expected_amount' => $order->total_amount]);
+            }
         }
 
         return response()->json($product);
