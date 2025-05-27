@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\ClientController;
@@ -137,4 +138,8 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
 
     Route::post('/payments', [PaymentController::class, 'createPayment']);
     Route::put('/payments/{id}', [PaymentController::class, 'updatePayment']);
+
+    Route::get('/cash-register', [CashRegisterController::class, 'get']);
+    Route::post('/cash-register/deposit', [CashRegisterController::class, 'deposit']);
+    Route::post('/cash-register/withdraw', [CashRegisterController::class, 'withdraw']);
 });
