@@ -24,9 +24,9 @@ class PaymentService
             'paid_at' => $validated['paid_at'] ?? null,
         ]);
 
-        // Create cash register entry if payment is paid
-        if (isset($validated['paid_amount']) && isset($validated['paid_at'])) {
-            $this->createCashRegisterEntry($payment);
+        // Registrar en caja solo el costo proporcional al pago inicial
+        if (isset($validated['paid_amount']) && isset($validated['paid_at']) && $validated['paid_amount'] > 0) {
+            $this->createCashRegisterEntry($payment, $validated['paid_amount']);
         }
 
         return $payment;
@@ -44,35 +44,50 @@ class PaymentService
 
     public function updatePayment($id, $data)
     {
-        $data['paid_at'] = Carbon::now();
         $payment = Payment::find($id);
+        $previousPaidAmount = $payment->paid_amount ?? 0;
+
+        $data['paid_at'] = Carbon::now();
         $payment->update($data);
 
-        // Create cash register entry if payment is being marked as paid
+        // Registrar en caja solo la diferencia pagada
         if (isset($data['paid_amount'])) {
-            $this->createCashRegisterEntry($payment);
+            $amountToRegister = $data['paid_amount'] - $previousPaidAmount;
+            if ($amountToRegister > 0) {
+                $this->createCashRegisterEntry($payment, $amountToRegister);
+            }
         }
 
         return $payment;
     }
 
-    private function createCashRegisterEntry($payment)
+    private function createCashRegisterEntry($payment, $amount = null)
     {
-        // Obtener el pedido y sus productos
         $order = $payment->order;
         $orderProducts = $order->products;
-
-        // Calcular el costo total basado en purchase_price
         $totalCost = $orderProducts->sum(function ($product) {
             return $product->purchase_price * $product->quantity;
         });
+        $expectedAmount = $payment->expected_amount;
+        $paidAmount = $amount ?? $expectedAmount;
 
-        $this->cashRegisterService->deposit([
-            'method' => $payment->method,
-            'amount' => $totalCost,
-            'type' => 'in',
-            'description' => 'Pago del pedido de ' . $order->client_name,
-            'payment_id' => $payment->id
-        ]);
+        // Calcular el total pagado hasta ahora (incluyendo este movimiento)
+        $totalPaid = ($payment->paid_amount ?? 0);
+        $previousPaid = $totalPaid - $paidAmount;
+        // Si la suma supera el total esperado, solo registrar hasta el total esperado
+        $maxToConsider = max(0, $expectedAmount - $previousPaid);
+        $paidForCost = min($paidAmount, $maxToConsider);
+        $proportion = $expectedAmount > 0 ? ($paidForCost / $expectedAmount) : 0;
+        $costToRegister = round($totalCost * $proportion, 2);
+
+        if ($costToRegister > 0) {
+            $this->cashRegisterService->deposit([
+                'method' => $payment->method,
+                'amount' => $costToRegister,
+                'type' => 'in',
+                'description' => 'Pago del pedido de ' . $order->client_name,
+                'payment_id' => $payment->id
+            ]);
+        }
     }
 }
