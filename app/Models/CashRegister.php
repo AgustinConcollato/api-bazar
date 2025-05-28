@@ -10,7 +10,6 @@ class CashRegister extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'date',
         'methos',
         'amount',
         'type',
