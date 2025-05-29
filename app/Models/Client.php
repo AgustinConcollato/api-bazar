@@ -60,4 +60,15 @@ class Client extends Authenticatable
         return $this->hasMany(ClientAddress::class, 'client_id', 'id');
     }
 
+    public function payments()
+    {
+        return $this->hasManyThrough(
+            Payment::class,
+            Order::class,
+            'client_id', // Foreign key on orders table...
+            'order_id',  // Foreign key on payments table...
+            'id',        // Local key on clients table...
+            'id'         // Local key on orders table...
+        );
+    }
 }

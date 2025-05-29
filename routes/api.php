@@ -101,6 +101,7 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
     Route::delete('/campaigns/{campaignId}/{productId}', [CampaignController::class, 'deleteProduct']);
 
     Route::get('/clients', [ClientController::class, 'get']);
+    Route::get('/clients/{id}', [ClientController::class, 'get']);
 
     Route::get('/order', [OrderController::class, 'get']);
 

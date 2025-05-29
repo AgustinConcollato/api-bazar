@@ -47,12 +47,22 @@ class ClientService
     public function get($id = null, $source)
     {
         if ($id) {
-            $client = Client::where(['id' => $id])->with('address');
+            $client = Client::where(['id' => $id])
+                ->with('address')
+                ->with('orders.payments')
+                ->with('payments', function ($query) {
+                    $query->whereColumn('paid_amount', '<', 'expected_amount');
+                })
+                ->first();
             return $client;
         }
 
         if ($source) {
-            $clients = Client::where('source', $source)->with('address')->get();
+            $clients = Client::where('source', $source)->with('address')
+                ->with('payments', function ($query) {
+                    $query->whereColumn('paid_amount', '<', 'expected_amount');
+                })
+            ->get();
         } else {
             $clients = Client::with('address')->get();
         }
