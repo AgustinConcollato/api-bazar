@@ -57,23 +57,13 @@ class ProductController
 
     public function detail(Request $request, $id)
     {
-        $product = Product::find($id);
+        $product = $this->productService->detail($id, $request);
 
         if (!$product) {
             return response()->json(Config::get('api-responses.error.not_found'), 404);
         }
 
-        $panel = $request->input('panel', false);
-
-        if ($panel) {
-            $providers = $this->providerService->getProvidersByProduct($id);
-
-            $product['providers'] = $providers;
-        } else {
-            $product->views += 1;
-            $product->save();
-        }
-
+        $product['sales_velocity'] = $this->productService->calculateSalesVelocity($product);
 
         return response()->json(array_merge(Config::get('api-responses.success.default'), ['product' => $product]));
     }

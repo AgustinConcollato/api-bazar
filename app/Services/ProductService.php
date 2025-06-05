@@ -3,12 +3,22 @@
 namespace App\Services;
 
 use App\Models\Categories;
+use App\Models\OrderProducts;
 use App\Models\Product;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ProviderService;
 
 class ProductService
 {
+
+    protected $providerService;
+
+    public function __construct(ProviderService $providerService)
+    {
+        $this->providerService = $providerService;
+    }
+
     public function add($request, $validated)
     {
 
@@ -71,7 +81,6 @@ class ProductService
         $product = Product::create($validated);
 
         return $product;
-
     }
 
     public function relatedProducts($productId)
@@ -249,8 +258,9 @@ class ProductService
 
         $product->update($validated);
 
-        return $product;
+        $product['sales_velocity'] = $this->calculateSalesVelocity($product);
 
+        return $product;
     }
 
     public function createThumbnail($sourcePath, $destPath, $maxWidth, $maxHeight)
@@ -313,5 +323,79 @@ class ProductService
         // Liberar memoria
         imagedestroy($sourceImage);
         imagedestroy($thumbnail);
+    }
+
+    public function detail($id, $request)
+    {
+        $product = Product::find($id);
+
+        if (!$product) {
+            throw new \Exception(Config::get('api-responses.error.not_found'));
+        }
+
+        $panel = $request->input('panel', false);
+
+        if ($panel) {
+            $providers = $this->providerService->getProvidersByProduct($id);
+
+            $product['providers'] = $providers;
+        } else {
+            $product->views += 1;
+            $product->save();
+        }
+
+        return $product;
+    }
+
+    public function calculateSalesVelocity($product)
+    {
+        // Obtener las ventas de los últimos 30 días
+        $recentSales = OrderProducts::where('product_id', $product->id)
+            ->whereHas('order', function($query) {
+                $query->where('created_at', '>=', now()->subDays(30));
+            })
+            ->get();
+
+        // Obtener las ventas de la última semana
+        $lastWeekSales = OrderProducts::where('product_id', $product->id)
+            ->whereHas('order', function($query) {
+                $query->where('created_at', '>=', now()->subDays(7));
+            })
+            ->get();
+
+        $totalQuantitySold = $recentSales->sum('quantity');
+        $lastWeekQuantitySold = $lastWeekSales->sum('quantity');
+        $weeksAnalyzed = 4; // 30 días ≈ 4 semanas
+        $velocityPerWeek = $totalQuantitySold / $weeksAnalyzed;
+        
+        // Calcular semanas estimadas para agotar stock actual
+        $weeksUntilStockout = $product->available_quantity > 0 && $velocityPerWeek > 0 
+            ? ceil($product->available_quantity / $velocityPerWeek) 
+            : null;
+
+        return [
+            'total_sold_last_30_days' => $totalQuantitySold, // ventas de los últimos 30 días
+            'total_sold_last_week' => $lastWeekQuantitySold, // ventas de la última semana
+            'velocity_per_week' => round($velocityPerWeek, 2), // velocidad de ventas por semana
+            'weeks_until_stockout' => $weeksUntilStockout, // semanas para agotar stock
+            'status' => $this->getStockStatus($weeksUntilStockout, $velocityPerWeek)
+        ];
+    }
+
+    private function getStockStatus($weeksUntilStockout, $velocityPerWeek)
+    {
+        if ($weeksUntilStockout === null) {
+            return 'sin_ventas';
+        }
+        
+        if ($weeksUntilStockout <= 1) { // 1 semana o menos
+            return 'stock_critico';
+        } elseif ($weeksUntilStockout <= 2) { // 1-2 semanas
+            return 'stock_bajo';
+        } elseif ($weeksUntilStockout <= 4) { // 2-4 semanas
+            return 'stock_medio';
+        } else { // más de 4 semanas
+            return 'stock_suficiente';
+        }
     }
 }
