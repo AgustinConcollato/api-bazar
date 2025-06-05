@@ -349,8 +349,8 @@ class ProductService
     public function calculateSalesVelocity($product)
     {
         // Usar la relación eager loaded para calcular las ventas
-        $recentSales = $product->orderProducts;
-        $lastWeekSales = $product->orderProducts->filter(function($orderProduct) {
+        $recentSales = $product->orderProducts ?? collect();
+        $lastWeekSales = $recentSales->filter(function($orderProduct) {
             return $orderProduct->order->created_at >= now()->subDays(7);
         });
 
