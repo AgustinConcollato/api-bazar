@@ -143,4 +143,6 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
     Route::get('/cash-register', [CashRegisterController::class, 'get']);
     Route::post('/cash-register/deposit', [CashRegisterController::class, 'deposit']);
     Route::post('/cash-register/withdraw', [CashRegisterController::class, 'withdraw']);
+
+    Route::get('/analytics/products/priority', [ProductController::class, 'getProductsByPriority']);
 });

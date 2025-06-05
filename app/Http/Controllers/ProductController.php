@@ -112,7 +112,7 @@ class ProductController
 
         if ($date) {
             // buscar los productos que se crearon en los ultimos 30 dias
-            $products = $query->where('created_at', '>=', now()->subDays(30))
+            $products = $query->where('created_at', '>=', now()->subDays(10))
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 
@@ -251,5 +251,22 @@ class ProductController
         $product->delete();
 
         return response()->json(Config::get('api-responses.success.deleted'));
+    }
+
+    public function getProductsByPriority()
+    {
+        try {
+            $products = $this->productService->getProductsBySalesVelocity();
+            
+            return response()->json([
+                'message' => 'Lista de productos ordenados por prioridad de reposición',
+                'data' => $products
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al obtener la lista de productos',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

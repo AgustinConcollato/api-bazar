@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Categories;
-use App\Models\OrderProducts;
 use App\Models\Product;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
@@ -349,19 +348,11 @@ class ProductService
 
     public function calculateSalesVelocity($product)
     {
-        // Obtener las ventas de los últimos 30 días
-        $recentSales = OrderProducts::where('product_id', $product->id)
-            ->whereHas('order', function($query) {
-                $query->where('created_at', '>=', now()->subDays(30));
-            })
-            ->get();
-
-        // Obtener las ventas de la última semana
-        $lastWeekSales = OrderProducts::where('product_id', $product->id)
-            ->whereHas('order', function($query) {
-                $query->where('created_at', '>=', now()->subDays(7));
-            })
-            ->get();
+        // Usar la relación eager loaded para calcular las ventas
+        $recentSales = $product->orderProducts;
+        $lastWeekSales = $product->orderProducts->filter(function($orderProduct) {
+            return $orderProduct->order->created_at >= now()->subDays(7);
+        });
 
         $totalQuantitySold = $recentSales->sum('quantity');
         $lastWeekQuantitySold = $lastWeekSales->sum('quantity');
@@ -397,5 +388,98 @@ class ProductService
         } else { // más de 4 semanas
             return 'stock_suficiente';
         }
+    }
+
+    public function getProductsBySalesVelocity()
+    {
+        // Obtener productos activos con solo los campos necesarios de sus ventas
+        $products = Product::where('status', 'active')
+            ->with(['orderProducts' => function($query) {
+                $query->select('product_id', 'quantity', 'order_id')
+                    ->whereHas('order', function($q) {
+                        $q->where('created_at', '>=', now()->subDays(30))
+                          ->where('status', 'completed');
+                    })
+                    ->with(['order' => function($q) {
+                        $q->select('id', 'client_id', 'client_name', 'updated_at');
+                    }]);
+            }])
+            ->select([
+                'id', 'name', 'available_quantity', 
+                'price', 'thumbnails', 'discount'
+            ])
+            ->get();
+
+        $productsWithVelocity = [];
+
+        foreach ($products as $product) {
+            $velocity = $this->calculateSalesVelocity($product);
+            
+            // Solo incluir productos que tienen ventas
+            if ($velocity['total_sold_last_30_days'] > 0) {
+                // Transformar order_products en orders con la información combinada
+                if ($product->orderProducts) {
+                    $product->orders = $product->orderProducts->map(function($orderProduct) use ($product) {
+                        return [
+                            'quantity' => $orderProduct->quantity,
+                            'id' => $orderProduct->order_id,
+                            'client_id' => $orderProduct->order->client_id,
+                            'client_name' => $orderProduct->order->client_name,
+                            'updated_at' => $orderProduct->order->updated_at
+                        ];
+                    });
+                } else {
+                    $product->orders = [];
+                }
+                
+                $product->sales_velocity = $velocity;
+                $product->priority_score = $this->calculatePriorityScore($velocity, $product);
+                $productsWithVelocity[] = $product;
+            }
+        }
+
+        // Ordenar por prioridad (primero los que necesitan reposición más urgente)
+        usort($productsWithVelocity, function($a, $b) {
+            return $b->priority_score <=> $a->priority_score;
+        });
+
+        // Limitar a los 20 productos más prioritarios
+        return array_slice($productsWithVelocity, 0, 20);
+    }
+
+    private function calculatePriorityScore($velocity, $product)
+    {
+        $score = 0;
+        
+        // Prioridad por estado de stock
+        switch ($velocity['status']) {
+            case 'stock_critico':
+                $score += 100;
+                break;
+            case 'stock_bajo':
+                $score += 75;
+                break;
+            case 'stock_medio':
+                $score += 50;
+                break;
+            case 'stock_suficiente':
+                $score += 25;
+                break;
+        }
+
+        // Prioridad por velocidad de venta (más ventas = más prioridad)
+        $score += min($velocity['velocity_per_week'] * 10, 50);
+
+        // Prioridad por ratio de stock/ventas semanales
+        if ($velocity['velocity_per_week'] > 0) {
+            $stockToSalesRatio = $product->available_quantity / $velocity['velocity_per_week'];
+            if ($stockToSalesRatio < 1) {
+                $score += 50; // Stock menor a una semana de ventas
+            } elseif ($stockToSalesRatio < 2) {
+                $score += 25; // Stock menor a dos semanas de ventas
+            }
+        }
+
+        return $score;
     }
 }
