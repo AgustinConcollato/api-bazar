@@ -350,8 +350,14 @@ class ProductService
     {
         // Usar la relación eager loaded para calcular las ventas
         $recentSales = $product->orderProducts ?? collect();
+        
+        // Filtrar solo las ventas completadas
+        $recentSales = $recentSales->filter(function($orderProduct) {
+            return $orderProduct->order->status === 'completed';
+        });
+
         $lastWeekSales = $recentSales->filter(function($orderProduct) {
-            return $orderProduct->order->created_at >= now()->subDays(7);
+            return $orderProduct->order->updated_at >= now()->subDays(7);
         });
 
         $totalQuantitySold = $recentSales->sum('quantity');
@@ -397,11 +403,10 @@ class ProductService
             ->with(['orderProducts' => function($query) {
                 $query->select('product_id', 'quantity', 'order_id')
                     ->whereHas('order', function($q) {
-                        $q->where('created_at', '>=', now()->subDays(30))
-                          ->where('status', 'completed');
+                        $q->where('updated_at', '>=', now()->subDays(30));
                     })
                     ->with(['order' => function($q) {
-                        $q->select('id', 'client_id', 'client_name', 'updated_at');
+                        $q->select('id', 'client_id', 'client_name', 'updated_at', 'status');
                     }]);
             }])
             ->select([
@@ -416,7 +421,7 @@ class ProductService
             $velocity = $this->calculateSalesVelocity($product);
             
             // Solo incluir productos que tienen ventas
-            if ($velocity['total_sold_last_30_days'] > 0) {
+            if ($velocity['total_sold_last_30_days'] > 1) {
                 // Transformar order_products en orders con la información combinada
                 if ($product->orderProducts) {
                     $product->orders = $product->orderProducts->map(function($orderProduct) use ($product) {
@@ -432,6 +437,8 @@ class ProductService
                     $product->orders = [];
                 }
                 
+                unset($product->orderProducts);
+
                 $product->sales_velocity = $velocity;
                 $product->priority_score = $this->calculatePriorityScore($velocity, $product);
                 $productsWithVelocity[] = $product;
@@ -444,7 +451,7 @@ class ProductService
         });
 
         // Limitar a los 20 productos más prioritarios
-        return array_slice($productsWithVelocity, 0, 20);
+        return array_slice($productsWithVelocity, 0);
     }
 
     private function calculatePriorityScore($velocity, $product)
