@@ -421,7 +421,7 @@ class ProductService
             $velocity = $this->calculateSalesVelocity($product);
             
             // Solo incluir productos que tienen ventas
-            if ($velocity['total_sold_last_30_days'] > 1) {
+            if ($velocity['total_sold_last_30_days'] > 2) {
                 // Transformar order_products en orders con la información combinada
                 if ($product->orderProducts) {
                     $product->orders = $product->orderProducts->map(function($orderProduct) use ($product) {
@@ -451,7 +451,7 @@ class ProductService
         });
 
         // Limitar a los 20 productos más prioritarios
-        return array_slice($productsWithVelocity, 0);
+        return array_slice($productsWithVelocity, 0, 20);
     }
 
     private function calculatePriorityScore($velocity, $product)
