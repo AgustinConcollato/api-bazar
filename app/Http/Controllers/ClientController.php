@@ -203,4 +203,36 @@ class ClientController
             return response()->json(['message' => 'Error al actualizar el correo', 'error' => $e->getMessage()], 500);
         }
     }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $client = $this->clientService->get($id, null);
+            if (!$client) {
+                return response()->json(['message' => 'Cliente no encontrado'], 404);
+            }
+
+            $messages = [
+                'email.unique' => 'El correo electrónico ya está registrado por otro cliente.'
+            ];
+
+            $validated = $request->validate([
+                'name' => 'sometimes|string|max:100',
+                'phone_number' => 'sometimes|string|max:20',
+                'email' => [
+                    'sometimes',
+                    'email',
+                    Rule::unique('clients')->ignore($client->id)
+                ],
+            ], $messages);
+
+            $client = $this->clientService->update($client, $validated);
+
+            return response()->json($client, 200);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al actualizar el cliente', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar el cliente', 'error' => $e->getMessage()], 500);
+        }
+    }
 }

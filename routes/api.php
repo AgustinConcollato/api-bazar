@@ -102,6 +102,7 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
 
     Route::get('/clients', [ClientController::class, 'get']);
     Route::get('/clients/{id}', [ClientController::class, 'get']);
+    Route::put('/clients/{id}', [ClientController::class, 'update']);
 
     Route::get('/order', [OrderController::class, 'get']);
 

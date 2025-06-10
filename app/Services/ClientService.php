@@ -115,4 +115,31 @@ class ClientService
 
         return $client;
     }
+
+    public function update($client, $validated)
+    {
+
+        if (isset($validated['email']) && $client->source !== 'dashboard') {
+            unset($validated['email']);
+            throw new ErrorException('No se pueden editar los datos de un cliente de la web', 403);
+        }
+
+        if (isset($validated['phone_number']) && $client->source !== 'dashboard') {
+            unset($validated['phone_number']);
+            throw new ErrorException('No se pueden editar los datos de un cliente de la web', 403);
+        }
+
+        if (isset($validated['name']) && $client->source !== 'dashboard') {
+            unset($validated['name']);
+            throw new ErrorException('No se pueden editar los datos de un cliente de la web', 403);
+        }
+
+        foreach ($validated as $key => $value) {
+            $client->$key = $value;
+        }
+
+        $client->save();
+
+        return $client;
+    }
 }
