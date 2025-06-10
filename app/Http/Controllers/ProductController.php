@@ -63,7 +63,11 @@ class ProductController
             return response()->json(Config::get('api-responses.error.not_found'), 404);
         }
 
-        $product['sales_velocity'] = $this->productService->calculateSalesVelocity($product);
+        $panel = $request->input('panel', false);
+
+        if ($panel) {
+            $product['sales_velocity'] = $this->productService->calculateSalesVelocity($product);
+        }
 
         return response()->json(array_merge(Config::get('api-responses.success.default'), ['product' => $product]));
     }
