@@ -18,16 +18,9 @@ class CashRegisterController
     public function get()
     {
         try {
-            [$totals, $monthlyTotals, $movements] = $this->cashRegisterService->get();
+            $response = $this->cashRegisterService->get();
 
-            return response()->json([
-                'balance' => [
-                    'total_in' => $monthlyTotals->total_in ?? 0,
-                    'total_out' => $monthlyTotals->total_out ?? 0,
-                    'available' => ($totals->total_in ?? 0) - ($totals->total_out ?? 0)
-                ],
-                'movements' => $movements
-            ]);
+            return response()->json($response);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -37,10 +30,11 @@ class CashRegisterController
     {
         try {
             $validated = $request->validate([
-                'amount' => 'required|numeric',
+                'amount' => 'required|numeric|min:0',
+                'total_amount' => 'nullable|numeric|min:0',
                 'description' => 'nullable|string',
                 'date' => 'nullable|date',
-                'method' => 'required|string',
+                'method' => 'required|string|in:cash,transfer,check,other',
             ]);
 
             $deposit = $this->cashRegisterService->deposit($validated);
@@ -57,10 +51,11 @@ class CashRegisterController
     {
         try {
             $validated = $request->validate([
-                'amount' => 'required|numeric',
+                'amount' => 'required|numeric|min:0',
+                'total_amount' => 'nullable|numeric|min:0',
                 'description' => 'nullable|string',
                 'date' => 'nullable|date',
-                'method' => 'nullable|string',
+                'method' => 'required|string|in:cash,transfer,check,other',
             ]);
 
             $withdraw = $this->cashRegisterService->withdraw($validated);

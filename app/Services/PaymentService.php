@@ -84,10 +84,11 @@ class PaymentService
             $this->cashRegisterService->deposit([
                 'method' => $payment->method,
                 'amount' => $costToRegister,
+                'total_amount' => $paidAmount,
                 'type' => 'in',
                 'description' => 'Pago del pedido de ' . $order->client_name,
                 'payment_id' => $payment->id
             ]);
         }
     }
-}
+}   

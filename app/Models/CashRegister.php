@@ -10,11 +10,17 @@ class CashRegister extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'methos',
+        'method',
         'amount',
+        'total_amount',
         'type',
         'description',
         'payment_id'
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'total_amount' => 'decimal:2'
     ];
 
     public function payment()
