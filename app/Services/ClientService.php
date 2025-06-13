@@ -22,7 +22,6 @@ class ClientService
         $token = $client->createToken('client_token')->plainTextToken;
 
         return ['token' => $token, 'client' => $client];
-
     }
 
     public function register($validated)
@@ -62,7 +61,7 @@ class ClientService
                 ->with('payments', function ($query) {
                     $query->whereColumn('paid_amount', '<', 'expected_amount');
                 })
-            ->get();
+                ->get();
         } else {
             $clients = Client::with('address')->get();
         }
@@ -141,5 +140,12 @@ class ClientService
         $client->save();
 
         return $client;
+    }
+
+    public function search($clientName)
+    {
+        $clients = Client::where('name', 'like', '%' . $clientName . '%')->paginate(20);
+
+        return $clients;
     }
 }

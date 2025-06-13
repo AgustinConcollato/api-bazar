@@ -235,4 +235,18 @@ class ClientController
             return response()->json(['message' => 'Error al actualizar el cliente', 'error' => $e->getMessage()], 500);
         }
     }
+
+    public function search($clientName)
+    {
+        try {
+
+            $clients = $this->clientService->search($clientName);
+
+            return response()->json($clients);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al buscar clientes', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al buscar clientes', 'error' => $e->getMessage()], 500);
+        }
+    }
 }
