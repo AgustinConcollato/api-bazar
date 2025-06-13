@@ -217,10 +217,10 @@ class ClientController
             ];
 
             $validated = $request->validate([
-                'name' => 'sometimes|string|max:100',
-                'phone_number' => 'sometimes|string|max:20',
+                'name' => 'nullable|string|max:100',
+                'phone_number' => 'nullable|string|max:20',
                 'email' => [
-                    'sometimes',
+                    'nullable',
                     'email',
                     Rule::unique('clients')->ignore($client->id)
                 ],
