@@ -136,6 +136,10 @@ class OrderController
     public function cancel($id)
     {
         $order = Order::find($id);
+        
+        // Eliminar los pagos asociados
+        $order->payments()->delete();
+        
         $order->update(['status' => 'cancelled']);
 
         $orders = $this->orderService->get(['status' => 'accepted']);
@@ -173,6 +177,10 @@ class OrderController
     public function reject($id)
     {
         $order = Order::find($id);
+        
+        // Eliminar los pagos asociados
+        $order->payments()->delete();
+        
         $order->update(['status' => 'rejected']);
 
         $orders = $this->orderService->get(['status' => 'pending']);
