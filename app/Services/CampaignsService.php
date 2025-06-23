@@ -11,18 +11,54 @@ use Illuminate\Support\Facades\Storage;
 
 class CampaignsService
 {
-
-
-    public function getCampaigns($stauts)
+    public function getCampaigns($status)
     {
-        return $stauts ?
-            Campaigns::where("is_active", $stauts)->get() :
+        return $status ?
+            Campaigns::where("is_active", $status)->get() :
             Campaigns::all();
+    }
+
+    public function getActiveCampaigns()
+    {
+        $currentDate = now();
+        
+        return Campaigns::where('is_active', true)
+            ->where('start_date', '<=', $currentDate)
+            ->where('end_date', '>=', $currentDate)
+            ->get();
     }
 
     public function getCampaignBySlug($slug)
     {
         return Campaigns::with('products')->where('slug', $slug)->first();
+    }
+
+    public function getActiveCampaignBySlug($slug)
+    {
+        $currentDate = now();
+        
+        // Primero buscar la campaña por slug sin filtros
+        $campaign = Campaigns::with('products')->where('slug', $slug)->first();
+        
+        if (!$campaign) {
+            throw new \Exception('La campaña no existe');
+        }
+        
+        // Verificar si está activa
+        if (!$campaign->is_active) {
+            throw new \Exception('La campaña no existe');
+        }
+        
+        // Verificar fechas
+        if ($currentDate < $campaign->start_date) {
+            throw new \Exception('Esta campaña todavía no ha empezado');
+        }
+        
+        if ($currentDate > $campaign->end_date) {
+            throw new \Exception('Esta campaña ya finalizó');
+        }
+        
+        return $campaign;
     }
 
     public function createCampaign($data, $request)
@@ -49,7 +85,22 @@ class CampaignsService
         $dataToSync = [];
 
         foreach ($products as $product) {
-            $dataToSync[$product['product_id']] = [
+            $productId = $product['product_id'];
+            
+            // Verificar si el producto ya está en otra campaña (activa o inactiva)
+            // Esto evita conflictos futuros cuando se activen las campañas
+            $existingCampaign = Campaigns::where('id', '!=', $campaignId) // Excluir la campaña actual
+                ->whereHas('products', function ($query) use ($productId) {
+                    $query->where('product_id', $productId);
+                })
+                ->first();
+
+            if ($existingCampaign) {
+                $statusText = $existingCampaign->is_active ? 'activa' : 'inactiva';
+                throw new \Exception("El producto con ID {$productId} ya está en la campaña '{$existingCampaign->name}' ({$statusText}). Un producto no puede estar en múltiples campañas al mismo tiempo.");
+            }
+
+            $dataToSync[$productId] = [
                 'custom_discount_type' => $product['discount_type'] ?? $campaign->discount_type,
                 'custom_discount_value' => $product['discount_value'] ?? $campaign->discount_value,
             ];
@@ -72,11 +123,37 @@ class CampaignsService
         $startDate = $data['start_date'] ?? $campaign->start_date;
         $endDate = $data['end_date'] ?? $campaign->end_date;
         $name = $data['name'] ?? null;
+        $isActive = isset($data['is_active']) ? $data['is_active'] : $campaign->is_active;
 
         if ($startDate && $endDate && $endDate <= $startDate) {
             $validator = Validator::make([], []);
             $validator->errors()->add('end_date', 'La fecha de finalización debe ser posterior a la fecha de inicio');
             throw new ValidationException($validator);
+        }
+
+        // Si se está activando la campaña, verificar conflictos con otras campañas activas
+        if ($isActive && !$campaign->is_active) {
+            $currentDate = now();
+            $conflicts = [];
+            
+            foreach ($campaign->products as $product) {
+                $conflictingCampaign = Campaigns::where('is_active', true)
+                    ->where('start_date', '<=', $currentDate)
+                    ->where('end_date', '>=', $currentDate)
+                    ->where('id', '!=', $campaignId)
+                    ->whereHas('products', function ($query) use ($product) {
+                        $query->where('product_id', $product->id);
+                    })
+                    ->first();
+                
+                if ($conflictingCampaign) {
+                    $conflicts[] = "El producto '{$product->name}' ya está en la campaña activa '{$conflictingCampaign->name}'";
+                }
+            }
+            
+            if (!empty($conflicts)) {
+                throw new \Exception("No se puede activar la campaña. Conflictos encontrados:\n" . implode("\n", $conflicts));
+            }
         }
 
         if ($name) {

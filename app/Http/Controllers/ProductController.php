@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Product;
 use App\Services\ProductService;
 use App\Services\ProviderService;
@@ -8,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+
 class ProductController
 {
 
@@ -67,6 +69,7 @@ class ProductController
 
         if ($panel) {
             $product['sales_velocity'] = $this->productService->calculateSalesVelocity($product);
+            $product->campaign = $this->productService->isProductInCampaign($product);
         }
 
         return response()->json(array_merge(Config::get('api-responses.success.default'), ['product' => $product]));
@@ -120,6 +123,11 @@ class ProductController
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 
+            // Aplicar descuentos de campañas activas
+            $products->getCollection()->transform(function ($product) {
+                return $this->productService->applyCampaignDiscounts($product);
+            });
+
             return response()->json($products);
         }
 
@@ -134,6 +142,17 @@ class ProductController
         }
 
         $products = $query->paginate(20);
+
+        // Aplicar descuentos de campañas activas
+        foreach ($products as $product) {
+            $campaignInfo = $this->productService->isProductInCampaign($product);
+
+            if ($panel) { 
+                $product->in_campaign = $campaignInfo["in_campaign"];
+            }
+
+            $this->productService->applyCampaignDiscounts($product);
+        }
 
         return response()->json($products);
     }
@@ -167,14 +186,11 @@ class ProductController
             $product = $this->productService->update($validated, $id);
 
             return response()->json(array_merge(Config::get('api-responses.success.updated'), ['product' => $product]));
-
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Error al actualizar el producto', 'errors' => $e->errors()]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al actualizar el producto', 'error' => $e->getMessage()]);
         }
-
-
     }
     public function updateImages(Request $request, $id)
     {
@@ -188,13 +204,11 @@ class ProductController
             $product = $this->productService->updateImages($validated, $id);
 
             return response()->json(['message' => 'Imagen actualizada con éxito', 'product' => $product]);
-
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Error al actualizar la foto', 'errors' => $e->errors()]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al actualizar la foto', 'errors' => $e->getMessage()]);
         }
-
     }
     public function addImage(Request $request, $id)
     {
@@ -222,7 +236,6 @@ class ProductController
             $product = $this->productService->deleteImage($validated, $id);
 
             return response()->json(['message' => 'Imagen eliminada con éxito', 'product' => $product]);
-
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Error al eliminar la foto', 'errors' => $e->errors()]);
         } catch (\Exception $e) {
@@ -261,7 +274,7 @@ class ProductController
     {
         try {
             $products = $this->productService->getProductsBySalesVelocity();
-            
+
             return response()->json([
                 'message' => 'Lista de productos ordenados por prioridad de reposición',
                 'data' => $products

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Campaigns;
 use App\Models\Categories;
 use App\Models\Product;
 use Illuminate\Support\Facades\Config;
@@ -109,6 +110,11 @@ class ProductService
             ->orderBy('views', 'desc') // o por created_at si preferís
             ->limit(10)
             ->get();
+
+        // Aplicar descuentos de campañas activas a los productos relacionados
+        $query->transform(function ($product) {
+            return $this->applyCampaignDiscounts($product);
+        });
 
         return $query;
     }
@@ -343,20 +349,124 @@ class ProductService
             $product->save();
         }
 
+        // Aplicar descuentos de campañas activas
+        $product = $this->applyCampaignDiscounts($product);
+
         return $product;
     }
+
+    /**
+     * Aplica descuentos de campañas activas a un producto
+     */
+    public function applyCampaignDiscounts($product)
+    {
+        $currentDate = now();
+
+        // Buscar campañas activas que incluyan este producto
+        $activeCampaigns = Campaigns::where('is_active', true)
+            ->where('start_date', '<=', $currentDate)
+            ->where('end_date', '>=', $currentDate)
+            ->whereHas('products', function ($query) use ($product) {
+                $query->where('product_id', $product->id);
+            })
+            ->with(['products' => function ($query) use ($product) {
+                $query->where('product_id', $product->id);
+            }])
+            ->get();
+
+        if ($activeCampaigns->isNotEmpty()) {
+            // Tomar la primera campaña activa (o puedes implementar lógica para priorizar)
+            $campaign = $activeCampaigns->first();
+            $campaignProduct = $campaign->products->first();
+
+            // Aplicar descuento personalizado del producto en la campaña o el descuento general de la campaña
+            $discountType = $campaignProduct->pivot->custom_discount_type ?? $campaign->discount_type;
+            $discountValue = (int)($campaignProduct->pivot->custom_discount_value ?? $campaign->discount_value);
+
+            if ($discountType && $discountValue) {
+
+                $product->campaign_discount = [
+                    'type' => $discountType,
+                    'value' => $discountValue,
+                    'campaign_name' => $campaign->name,
+                    'campaign_slug' => $campaign->slug
+                ];
+
+                // Calcular precio con descuento
+                if ($discountType === 'percentage') {
+                    $product->final_price = $product->price - ($product->price * ($discountValue / 100));
+                } else {
+                    $product->final_price = max(0, $product->price - $discountValue);
+                }
+            }
+        }
+
+        return $product;
+    }
+
+    /**
+     * Aplica descuentos de campañas activas a una colección de productos
+     */
+    public function isProductInCampaign($product)
+    {
+        // Buscar si el producto está en cualquier campaña (activa o inactiva)
+        $campaign = Campaigns::whereHas('products', function ($query) use ($product) {
+            $query->where('product_id', $product->id);
+        })->first();
+
+        if ($campaign) {
+            return [
+                'in_campaign' => true,
+                'campaign' => [
+                    'id' => $campaign->id,
+                    'name' => $campaign->name,
+                    'slug' => $campaign->slug,
+                    'is_active' => $campaign->is_active,
+                    'start_date' => $campaign->start_date,
+                    'end_date' => $campaign->end_date
+                ]
+            ];
+        }
+
+        return [
+            'in_campaign' => false,
+            'campaign' => null
+        ];
+    }
+
+    // /**
+    //  * Determina el estado de una campaña
+    //  */
+    // private function getCampaignStatus($campaign)
+    // {
+    //     $currentDate = now();
+        
+    //     if (!$campaign->is_active) {
+    //         return 'inactive';
+    //     }
+        
+    //     if ($currentDate < $campaign->start_date) {
+    //         return 'not_started';
+    //     }
+        
+    //     if ($currentDate > $campaign->end_date) {
+    //         return 'expired';
+    //     }
+        
+    //     return 'active';
+    // }
 
     public function calculateSalesVelocity($product)
     {
         // Usar la relación eager loaded para calcular las ventas
         $recentSales = $product->orderProducts ?? collect();
-        
+
         // Filtrar solo las ventas completadas
-        $recentSales = $recentSales->filter(function($orderProduct) {
+        $recentSales = $recentSales->filter(function ($orderProduct) {
             return $orderProduct->order->status === 'completed';
         });
 
-        $lastWeekSales = $recentSales->filter(function($orderProduct) {
+        $lastWeekSales = $recentSales->filter(function ($orderProduct) {
             return $orderProduct->order->updated_at >= now()->subDays(7);
         });
 
@@ -364,10 +474,10 @@ class ProductService
         $lastWeekQuantitySold = $lastWeekSales->sum('quantity');
         $weeksAnalyzed = 4; // 30 días ≈ 4 semanas
         $velocityPerWeek = $totalQuantitySold / $weeksAnalyzed;
-        
+
         // Calcular semanas estimadas para agotar stock actual
-        $weeksUntilStockout = $product->available_quantity > 0 && $velocityPerWeek > 0 
-            ? ceil($product->available_quantity / $velocityPerWeek) 
+        $weeksUntilStockout = $product->available_quantity > 0 && $velocityPerWeek > 0
+            ? ceil($product->available_quantity / $velocityPerWeek)
             : null;
 
         return [
@@ -384,7 +494,7 @@ class ProductService
         if ($weeksUntilStockout === null) {
             return 'sin_ventas';
         }
-        
+
         if ($weeksUntilStockout <= 1) { // 1 semana o menos
             return 'stock_critico';
         } elseif ($weeksUntilStockout <= 2) { // 1-2 semanas
@@ -400,18 +510,22 @@ class ProductService
     {
         // Obtener productos activos con solo los campos necesarios de sus ventas
         $products = Product::where('status', 'active')
-            ->with(['orderProducts' => function($query) {
+            ->with(['orderProducts' => function ($query) {
                 $query->select('product_id', 'quantity', 'order_id')
-                    ->whereHas('order', function($q) {
+                    ->whereHas('order', function ($q) {
                         $q->where('updated_at', '>=', now()->subDays(30));
                     })
-                    ->with(['order' => function($q) {
+                    ->with(['order' => function ($q) {
                         $q->select('id', 'client_id', 'client_name', 'updated_at', 'status');
                     }]);
             }])
             ->select([
-                'id', 'name', 'available_quantity', 
-                'price', 'thumbnails', 'discount'
+                'id',
+                'name',
+                'available_quantity',
+                'price',
+                'thumbnails',
+                'discount'
             ])
             ->get();
 
@@ -419,12 +533,12 @@ class ProductService
 
         foreach ($products as $product) {
             $velocity = $this->calculateSalesVelocity($product);
-            
+
             // Solo incluir productos que tienen ventas
             if ($velocity['total_sold_last_30_days'] > 2) {
                 // Transformar order_products en orders con la información combinada
                 if ($product->orderProducts) {
-                    $product->orders = $product->orderProducts->map(function($orderProduct) use ($product) {
+                    $product->orders = $product->orderProducts->map(function ($orderProduct) use ($product) {
                         return [
                             'quantity' => $orderProduct->quantity,
                             'id' => $orderProduct->order_id,
@@ -436,7 +550,7 @@ class ProductService
                 } else {
                     $product->orders = [];
                 }
-                
+
                 unset($product->orderProducts);
 
                 $product->sales_velocity = $velocity;
@@ -446,9 +560,14 @@ class ProductService
         }
 
         // Ordenar por prioridad (primero los que necesitan reposición más urgente)
-        usort($productsWithVelocity, function($a, $b) {
+        usort($productsWithVelocity, function ($a, $b) {
             return $b->priority_score <=> $a->priority_score;
         });
+
+        // Aplicar descuentos de campañas activas
+        foreach ($productsWithVelocity as $product) {
+            $this->applyCampaignDiscounts($product);
+        }
 
         // Limitar a los 20 productos más prioritarios
         return array_slice($productsWithVelocity, 0, 20);
@@ -457,7 +576,7 @@ class ProductService
     private function calculatePriorityScore($velocity, $product)
     {
         $score = 0;
-        
+
         // Prioridad por estado de stock
         switch ($velocity['status']) {
             case 'stock_critico':

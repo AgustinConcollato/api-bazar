@@ -18,8 +18,14 @@ class CampaignController
 
     public function get(Request $request)
     {
-        $stauts = $request->input("stauts") || false;
-        $campaigns = $this->campaignsService->getCampaigns($stauts);
+        $status = $request->input("status") || false;
+        $campaigns = $this->campaignsService->getCampaigns($status);
+        return response()->json($campaigns);
+    }
+
+    public function getActiveCampaign()
+    {
+        $campaigns = $this->campaignsService->getActiveCampaigns();
         return response()->json($campaigns);
     }
 
@@ -27,6 +33,24 @@ class CampaignController
     {
         $campaign = $this->campaignsService->getCampaignBySlug($slug);
         return response()->json($campaign);
+    }
+
+    public function getActiveCampaignBySlug($slug)
+    {
+        try {
+            $campaign = $this->campaignsService->getActiveCampaignBySlug($slug);
+            return response()->json($campaign);
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            
+            if ($message === 'La campaña no existe') {
+                return response()->json(['error' => $message], 404);
+            } elseif ($message === 'Esta campaña todavía no ha empezado' || $message === 'Esta campaña ya finalizó') {
+                return response()->json(['error' => $message], 400);
+            } else {
+                return response()->json(['error' => 'Error interno del servidor'], 500);
+            }
+        }
     }
 
     public function create(Request $request)
