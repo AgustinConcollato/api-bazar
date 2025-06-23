@@ -13,7 +13,9 @@ class ClientService
 
     public function login($validated)
     {
-        $client = Client::where('email', $validated['email'])->first();
+        $client = Client::where('email', $validated['email'])
+            ->with('address')
+            ->first();
 
         if (!$client || !Hash::check($validated['password'], $client->password)) {
             throw new \Exception('Credenciales incorrectas', 401);

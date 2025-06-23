@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Client;
 use App\Services\ClientService;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -10,7 +11,6 @@ use Illuminate\Http\Request;
 
 class ClientController
 {
-    //implementar esta protección en los demas controladores 
     protected $clientService;
 
     public function __construct(ClientService $clientService)
@@ -22,6 +22,10 @@ class ClientController
     {
         try {
             $client = $request->user('client');
+
+            if ($client) {
+                $client = Client::with('address')->find($client->id);
+            }
 
             return response()->json(['client' => $client]);
         } catch (\Exception $e) {
