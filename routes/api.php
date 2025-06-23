@@ -57,8 +57,8 @@ Route::put('/user/{userId}', [ClientAddressController::class, 'update']);
 
 Route::get('/products/related/{productId}', [ProductController::class, 'relatedProducts']);
 
-Route::get('/campaigns', [CampaignController::class, 'get']);
-Route::get('/campaigns/{slug}', [CampaignController::class, 'getBySlug']);
+Route::get('/campaigns/active', [CampaignController::class, 'getActiveCampaign']);
+Route::get('/campaigns/active/{slug}', [CampaignController::class, 'getActiveCampaignBySlug']);
 
 //
 //
@@ -147,4 +147,8 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
     Route::post('/cash-register/withdraw', [CashRegisterController::class, 'withdraw']);
 
     Route::get('/analytics/products/priority', [ProductController::class, 'getProductsByPriority']);
+
+
+    Route::get('/campaigns', [CampaignController::class, 'get']);
+    Route::get('/campaigns/{slug}', [CampaignController::class, 'getBySlug']);
 });
