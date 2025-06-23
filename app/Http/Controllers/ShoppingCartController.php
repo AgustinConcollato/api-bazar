@@ -7,6 +7,7 @@ use App\Models\OrderProducts;
 use App\Models\Product;
 use App\Models\ShoppingCart;
 use App\Services\PaymentService;
+use App\Services\ProductService;
 use App\Services\ProviderService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -16,13 +17,18 @@ class ShoppingCartController
 
     protected $paymentService;
     protected $providerService;
+    protected $productService;
 
-    public function __construct(PaymentService $paymentService, ProviderService $providerService)
-    {
+    public function __construct(
+        PaymentService $paymentService,
+        ProviderService $providerService,
+        ProductService $productService
+    ) {
         $this->paymentService = $paymentService;
         $this->providerService = $providerService;
+        $this->productService = $productService;
     }
-    
+
     public function add(Request $request)
     {
         $data = $request->validate([
@@ -38,11 +44,13 @@ class ShoppingCartController
         if ($shoppingCart) {
             $shoppingCart->quantity += $data['quantity'];
             $shoppingCart->save();
-
+            $shoppingCart->load('product');
+        
             return response()->json($shoppingCart, 200);
         }
 
         $shoppingCart = ShoppingCart::create($data);
+        $shoppingCart->load('product');
 
         return response()->json($shoppingCart, 201);
     }
@@ -59,6 +67,12 @@ class ShoppingCartController
                 return false;
             }
             return true;
+        });
+
+        // Aplicar descuentos de campañas activas a cada producto
+        $shoppingCart->transform(function ($item) {
+            $item->product = $this->productService->applyCampaignDiscounts($item->product);
+            return $item;
         });
 
         return response()->json($shoppingCart);
@@ -87,7 +101,6 @@ class ShoppingCartController
         return response()->json($product);
     }
 
-
     public function delete($user, $id)
     {
         $product = ShoppingCart::where('client_id', $user)
@@ -109,12 +122,15 @@ class ShoppingCartController
                 'address' => 'required|array',
                 'payment_methods' => 'required|array',
                 'payment_methods.*' => 'numeric|min:0',
+                'discount' => 'nullable|numeric'
             ]);
 
             $clientId = $validated['client_id'];
             $userName = $validated['user_name'];
             $comment = $validated['comment'];
             $address = $validated['address'];
+            $discount = $validated['discount'];
+
             $cartItems = ShoppingCart::where('client_id', $clientId)->get();
 
             if ($cartItems->isEmpty()) {
@@ -125,18 +141,33 @@ class ShoppingCartController
             foreach ($cartItems as $item) {
                 $product = Product::find($item->product_id);
 
-                if ($product->discount) {
+                // Aplicar descuentos de campañas activas
+                $product = $this->productService->applyCampaignDiscounts($product);
+
+                if ($product->campaign_discount) {
+                    // Usar descuento de campaña
+                    $discountType = $product->campaign_discount['type'];
+                    $discountValue = $product->campaign_discount['value'];
+
+                    if ($discountType === 'percentage') {
+                        $checkPrice = $item->quantity * ($product->price - ($product->price * $discountValue / 100));
+                    } else {
+                        $checkPrice = $item->quantity * max(0, $product->price - $discountValue);
+                    }
+                } elseif ($product->discount) {
+                    // Usar descuento del producto
                     $discount = $product->discount;
                     $checkPrice = $item->quantity * ($product->price - ($product->price * $discount) / 100);
                 } else {
-                    $discount = 0;
+                    // Sin descuento
                     $checkPrice = $item->quantity * $product->price;
                 }
+
                 $totalPrice += $checkPrice;
             }
 
             if ($totalPrice < 150000) {
-                throw new \Exception("Compra minima por la web es de $150000", 422);
+                throw new \Exception("Compra minima por la web es de $150.000", 422);
             }
 
             $order = Order::create([
@@ -145,7 +176,8 @@ class ShoppingCartController
                 'status' => 'pending',
                 'total_amount' => 0,
                 'comment' => $comment,
-                'address' => json_encode($address)
+                'address' => json_encode($address),
+                'discount' => $discount
             ]);
 
             foreach ($cartItems as $item) {
@@ -159,10 +191,27 @@ class ShoppingCartController
                     return response()->json(['message' => "El producto con ID {$item->product_id} no existe"], 404);
                 }
 
-                if ($product->discount) {
+                // Aplicar descuentos de campañas activas
+                $product = $this->productService->applyCampaignDiscounts($product);
+
+                if ($product->campaign_discount) {
+                    // Usar descuento de campaña
+                    $discountType = $product->campaign_discount['type'];
+                    $discountValue = $product->campaign_discount['value'];
+
+                    if ($discountType === 'percentage') {
+                        $subtotal = $item->quantity * ($product->price - ($product->price * $discountValue / 100));
+                        $discount = $discountValue; // Para guardar en la base de datos
+                    } else {
+                        $subtotal = $item->quantity * max(0, $product->price - $discountValue);
+                        $discount = 0; // Para descuentos fijos, guardamos 0 en el campo discount
+                    }
+                } elseif ($product->discount) {
+                    // Usar descuento del producto
                     $discount = $product->discount;
                     $subtotal = $item->quantity * ($product->price - ($product->price * $discount) / 100);
                 } else {
+                    // Sin descuento
                     $discount = 0;
                     $subtotal = $item->quantity * $product->price;
                 }
@@ -235,5 +284,4 @@ class ShoppingCartController
             ], 500);
         }
     }
-
 }
