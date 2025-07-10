@@ -13,13 +13,9 @@ class CashRegisterService
         $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
 
-        // Obtener los totales de entrada y salida en una sola consulta
-        $totals = CashRegister::select([
-            DB::raw('SUM(CASE WHEN type = "in" THEN total_amount ELSE 0 END) as total_in'),
-            DB::raw('SUM(CASE WHEN type = "out" THEN total_amount ELSE 0 END) as total_out'),
-            DB::raw('SUM(CASE WHEN type = "in" THEN amount ELSE 0 END) as amount_in'),
-            DB::raw('SUM(CASE WHEN type = "out" THEN amount ELSE 0 END) as amount_out')
-        ])->first();
+        // Obtener el último movimiento para el saldo actual
+        $last = CashRegister::orderBy('created_at', 'desc')->first();
+        $current_balance = $last ? $last->current_balance : 0;
 
         // Obtener los totales del mes actual
         $monthlyTotals = CashRegister::whereBetween('updated_at', [$startOfMonth, $endOfMonth])
@@ -36,9 +32,9 @@ class CashRegisterService
 
         return [
             'balance' => [
-                'total_in' => $totals->total_in ?? 0,
-                'total_out' => $totals->total_out ?? 0,
-                'available' => ($totals->amount_in ?? 0) - ($totals->amount_out ?? 0)
+                'total_in' => 0,
+                'total_out' => 0,
+                'available' => $current_balance
             ],
             'monthly' => [
                 'total_in' => $monthlyTotals->total_in ?? 0,
@@ -51,20 +47,26 @@ class CashRegisterService
     public function deposit($data)
     {
         $data['type'] = 'in';
-        // En un depósito manual, amount y total_amount son iguales
         if (!isset($data['total_amount'])) {
             $data['total_amount'] = $data['amount'];
         }
+        $last = CashRegister::orderBy('created_at', 'desc')->first();
+        $previous_balance = $last ? $last->current_balance : 0;
+        $data['previous_balance'] = $previous_balance;
+        $data['current_balance'] = $previous_balance + $data['amount'];
         return CashRegister::create($data);
     }
 
     public function withdraw($data)
     {
         $data['type'] = 'out';
-        // En un retiro, amount y total_amount son iguales
         if (!isset($data['total_amount'])) {
             $data['total_amount'] = $data['amount'];
         }
+        $last = CashRegister::orderBy('created_at', 'desc')->first();
+        $previous_balance = $last ? $last->current_balance : 0;
+        $data['previous_balance'] = $previous_balance;
+        $data['current_balance'] = $previous_balance - $data['amount'];
         return CashRegister::create($data);
     }
 }
