@@ -18,7 +18,7 @@ class CashRegisterService
         $current_balance = $last ? $last->current_balance : 0;
 
         // Obtener los totales del mes actual
-        $monthlyTotals = CashRegister::whereBetween('updated_at', [$startOfMonth, $endOfMonth])
+        $monthlyTotals = CashRegister::whereBetween('created_at', [$startOfMonth, $endOfMonth])
             ->select([
                 DB::raw('SUM(CASE WHEN type = "in" THEN total_amount ELSE 0 END) as total_in'),
                 DB::raw('SUM(CASE WHEN type = "out" THEN total_amount ELSE 0 END) as total_out')
@@ -26,7 +26,7 @@ class CashRegisterService
 
         // Obtener los movimientos más recientes
         $movements = CashRegister::with('payment.order')
-            ->orderBy('updated_at', 'desc')
+            ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get();
 
