@@ -12,6 +12,8 @@ class CashRegister extends Model
     protected $fillable = [
         'method',
         'amount',
+        'previous_balance',
+        'current_balance',
         'total_amount',
         'type',
         'description',
@@ -20,6 +22,8 @@ class CashRegister extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'previous_balance' => 'decimal:2',
+        'current_balance' => 'decimal:2',
         'total_amount' => 'decimal:2'
     ];
 
