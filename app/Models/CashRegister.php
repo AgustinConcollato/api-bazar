@@ -24,7 +24,8 @@ class CashRegister extends Model
         'amount' => 'decimal:2',
         'previous_balance' => 'decimal:2',
         'current_balance' => 'decimal:2',
-        'total_amount' => 'decimal:2'
+        'total_amount' => 'decimal:2',
+        'id' => 'string'
     ];
 
     public function payment()
