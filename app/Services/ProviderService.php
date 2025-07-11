@@ -52,9 +52,21 @@ class ProviderService
         $providers = json_decode($validated['providers'], true);
 
         if (is_array($providers) && count($providers) > 0) {
-            foreach ($providers as $providerId => $purchasePrice) {
+            foreach ($providers as $providerId => $providerData) {
+                // Soporta tanto formato antiguo (solo precio) como nuevo (objeto con purchase_price y provider_url)
+                if (is_array($providerData)) {
+                    $syncData = [
+                        'purchase_price' => $providerData['purchase_price'] ?? null,
+                        'provider_url' => $providerData['provider_url'] ?? null
+                    ];
+                } else {
+                    $syncData = [
+                        'purchase_price' => $providerData,
+                        'provider_url' => null
+                    ];
+                }
                 $product->providers()->syncWithoutDetaching([
-                    $providerId => ['purchase_price' => $purchasePrice]
+                    $providerId => $syncData
                 ]);
             }
         }
