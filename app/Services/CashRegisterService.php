@@ -29,7 +29,7 @@ class CashRegisterService
         // Obtener los movimientos más recientes
         $movements = CashRegister::with('payment.order')
             ->orderBy('created_at', 'desc')
-            ->limit(20)
+            ->limit(50)
             ->get();
 
         return [
