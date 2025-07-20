@@ -54,6 +54,10 @@
         padding-top: 10px;
     }
 
+    .name {
+        width: 10cm;
+    }
+
     .price {
         text-align: right;
     }
@@ -74,6 +78,18 @@
 </style>
 
 <body>
+    @php
+    function formatPrice($precio) {
+        if (fmod($precio, 1) == 0.0) {
+            return number_format($precio, 0, '', '.');
+        } else {
+            $formateado = number_format($precio, 2, ',', '.');
+            $formateado = rtrim($formateado, '0');
+            $formateado = rtrim($formateado, ',');
+            return $formateado;
+        }
+    }
+    @endphp
     <header>
         <div>
             <p>Pedido para: {{ $client['name'] }}</p>
@@ -84,28 +100,29 @@
         <thead>
             <tr>
                 <th>CANTIDAD</th>
-                <th>PRODUCTO</th>
+                <th class="name">PRODUCTO</th>
                 <th class="price">P/UNIDAD</th>
-                <th class="price">DESC</th>
+                <th class="price">DESC(%)</th>
                 <th class="price">SUBTOTAL</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($products as $product)
-                <tr>
-                    <td>{{ $product['quantity'] }}</td>
-                    <td>{{ $product['name'] }}</td>
-                    <td class="price">{{ $product['price'] }}</td>
-                    <td class="price">{{ $product['discount'] ? $product['discount'] : 0 }}%</td>
-                    <td class="price">{{ $product['subtotal'] }}
-                    </td>
-                </tr>
+            <tr>
+                <td>{{ $product['quantity'] }}</td>
+                <td class="name">{{ $product['name'] }}</td>
+                <td class="price">{{ formatPrice($product['price']) }}</td>
+                <td class="price">{{ $product['discount'] ? $product['discount'] : 0 }}</td>
+                <td class="price">{{ formatPrice($product['subtotal']) }}
+                </td>
+            </tr>
             @endforeach
         </tbody>
     </table>
     <div class="detail">
+        <p>{{$discount ? 'Subtotal:  $' . formatPrice($total) : ''}} </p>
         <p>{{$discount ? 'Descuento:  ' . $discount . '%' : ''}} </p>
-        <p class="total">PRECIO TOTAL: $ {{$discount ? $total - ($discount * $total) / 100 : $total}}</p>
+        <p class="total">PRECIO TOTAL: $ {{$discount ? formatPrice($total - ($discount * $total) / 100) : formatPrice($total)}}</p>
     </div>
 </body>
 
