@@ -61,6 +61,15 @@ class OrderService
             $order = Order::find($validated['order_id']);
             $order->update(['total_amount' => $order->total_amount + $subtotal]);
 
+            // Actualizar expected_amount del pago asociado considerando el descuento
+            $payment = $order->payments()->first();
+            if ($payment) {
+                $totalWithoutDiscount = $order->total_amount;
+                $discount = $order->discount ?? 0;
+                $totalWithDiscount = $discount ? $totalWithoutDiscount - ($discount * $totalWithoutDiscount) / 100 : $totalWithoutDiscount;
+                $payment->update(['expected_amount' => $totalWithDiscount]);
+            }
+
             return $product;
         }
     }

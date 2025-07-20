@@ -130,16 +130,25 @@ class OrderController
 
         $order = Order::with('products')->find($order->id);
 
+        // Actualizar expected_amount del pago asociado considerando el descuento
+        $payment = $order->payments()->first();
+        if ($payment) {
+            $totalWithoutDiscount = $order->total_amount;
+            $discount = $order->discount ?? 0;
+            $totalWithDiscount = $discount ? $totalWithoutDiscount - ($discount * $totalWithoutDiscount) / 100 : $totalWithoutDiscount;
+            $payment->update(['expected_amount' => $totalWithDiscount]);
+        }
+
         return response()->json($order);
     }
 
     public function cancel($id)
     {
         $order = Order::find($id);
-        
+
         // Eliminar los pagos asociados
         $order->payments()->delete();
-        
+
         $order->update(['status' => 'cancelled']);
 
         $orders = $this->orderService->get(['status' => 'accepted']);
@@ -177,10 +186,10 @@ class OrderController
     public function reject($id)
     {
         $order = Order::find($id);
-        
+
         // Eliminar los pagos asociados
         $order->payments()->delete();
-        
+
         $order->update(['status' => 'rejected']);
 
         $orders = $this->orderService->get(['status' => 'pending']);
@@ -245,7 +254,10 @@ class OrderController
 
             $payment = $order->payments()->first();
             if ($payment) {
-                $payment->update(['expected_amount' => $order->total_amount]);
+                $totalWithoutDiscount = $order->total_amount;
+                $discount = $order->discount ?? 0;
+                $totalWithDiscount = $discount ? $totalWithoutDiscount - ($discount * $totalWithoutDiscount) / 100 : $totalWithoutDiscount;
+                $payment->update(['expected_amount' => $totalWithDiscount]);
             }
         }
 
