@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CashRegister;
 use App\Models\Payment;
 use Carbon\Carbon;
 
@@ -16,7 +17,10 @@ class PaymentService
 
     public function createPayment($validated)
     {
+        $cashRegister = CashRegister::where('primary', '=', 1)->first();
+
         $payment = Payment::create([
+            'cash_register_id' => $cashRegister->id,
             'order_id' => $validated['order_id'],
             'method' => $validated['method'],
             'expected_amount' => $validated['expected_amount'],
@@ -80,8 +84,11 @@ class PaymentService
         $proportion = $expectedAmount > 0 ? ($paidForCost / $expectedAmount) : 0;
         $costToRegister = round($totalCost * $proportion, 2);
 
+        $cashRegister = CashRegister::where('primary', '=', 1)->first();
+
         if ($costToRegister > 0) {
             $this->cashRegisterService->deposit([
+                'cash_register_id' => $cashRegister->id,
                 'method' => $payment->method,
                 'amount' => $costToRegister,
                 'total_amount' => $paidAmount,
@@ -91,4 +98,4 @@ class PaymentService
             ]);
         }
     }
-}   
+}
