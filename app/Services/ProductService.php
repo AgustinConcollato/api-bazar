@@ -136,6 +136,18 @@ class ProductService
             return response()->json(['error' => 'El índice de la imagen no existe'], 400);
         }
 
+        // Elimina las imágenes anteriores si existen
+        $oldImagePath = $images[$validated['index']];
+        $oldThumbnailPath = $thumbnails[$validated['index']] ?? null;
+
+        if (Storage::disk('public')->exists($oldImagePath)) {
+            Storage::disk('public')->delete($oldImagePath);
+        }
+
+        if ($oldThumbnailPath && Storage::disk('public')->exists($oldThumbnailPath)) {
+            Storage::disk('public')->delete($oldThumbnailPath);
+        }
+
         // Almacena la nueva imagen
         $newImagePath = $validated['new_image']->store('images/products', 'public');
         $images[$validated['index']] = $newImagePath;
@@ -440,19 +452,19 @@ class ProductService
     // private function getCampaignStatus($campaign)
     // {
     //     $currentDate = now();
-        
+
     //     if (!$campaign->is_active) {
     //         return 'inactive';
     //     }
-        
+
     //     if ($currentDate < $campaign->start_date) {
     //         return 'not_started';
     //     }
-        
+
     //     if ($currentDate > $campaign->end_date) {
     //         return 'expired';
     //     }
-        
+
     //     return 'active';
     // }
 
