@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Movement;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -9,36 +10,21 @@ use Illuminate\Support\Str;
 class CashRegister extends Model
 {
     use HasFactory;
-    protected $fillable = [
-        'method',
-        'amount',
-        'previous_balance',
-        'current_balance',
-        'total_amount',
-        'type',
-        'description',
-        'payment_id'
-    ];
 
-    protected $casts = [
-        'amount' => 'decimal:2',
-        'previous_balance' => 'decimal:2',
-        'current_balance' => 'decimal:2',
-        'total_amount' => 'decimal:2',
-        'id' => 'string'
-    ];
+    protected $keyType = 'string';
+    public $incrementing = false;
 
-    public function payment()
+    protected $fillable = ['name', 'description', 'balance'];
+
+    protected static function booted()
     {
-        return $this->belongsTo(Payment::class);
+        static::creating(function ($model) {
+            $model->id = $model->id  ?: (string) Str::uuid();
+        });
     }
 
-    public static function boot()
+    public function movements()
     {
-        parent::boot();
-
-        static::creating(function ($model) {
-            $model->id = Str::uuid();
-        });
+        return $this->hasMany(Movement::class)->orderBy('created_at','desc');
     }
 }
