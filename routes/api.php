@@ -142,12 +142,14 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
     Route::post('/payments', [PaymentController::class, 'createPayment']);
     Route::put('/payments/{id}', [PaymentController::class, 'updatePayment']);
 
+    Route::post('/cash-register/create', [CashRegisterController::class, 'create']);
     Route::get('/cash-register', [CashRegisterController::class, 'get']);
+    Route::get('/cash-register/{id}', [CashRegisterController::class, 'get']);
     Route::post('/cash-register/deposit', [CashRegisterController::class, 'deposit']);
     Route::post('/cash-register/withdraw', [CashRegisterController::class, 'withdraw']);
+    Route::post('/cash-register/transfer-money', [CashRegisterController::class, 'transferMoney']);
 
     Route::get('/analytics/products/priority', [ProductController::class, 'getProductsByPriority']);
-
 
     Route::get('/campaigns', [CampaignController::class, 'get']);
     Route::get('/campaigns/{slug}', [CampaignController::class, 'getBySlug']);
