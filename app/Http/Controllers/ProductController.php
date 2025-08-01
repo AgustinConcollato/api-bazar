@@ -84,6 +84,8 @@ class ProductController
         $views = $request->input('views');
         $price = $request->input('price');
         $status = $request->input('status');
+        $discount = $request->input('discount');
+        $availableQuantity = $request->input('available_quantity');
 
         $query = $panel
             ? Product::with('providers')
@@ -111,6 +113,14 @@ class ProductController
 
         if (!$panel) {
             $query->where('status', 'active');
+        }
+
+        if ($availableQuantity) {
+            $query->where('available_quantity', '>',  0);
+        }
+
+        if ($discount) {
+            $query->where('discount', '>', 0);
         }
 
         if ($status) {
@@ -147,7 +157,7 @@ class ProductController
         foreach ($products as $product) {
             $campaignInfo = $this->productService->isProductInCampaign($product);
 
-            if ($panel) { 
+            if ($panel) {
                 $product->in_campaign = $campaignInfo["in_campaign"];
             }
 

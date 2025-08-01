@@ -96,6 +96,7 @@ class ProductService
 
         $query = Product::where('id', '!=', $product->id)
             ->where('status', 'active')
+            ->where('available_quantity', '>', 0)
             ->where('category_code', $product->category_code)
             // ->where(function ($q) use ($subcategories) {
             //     foreach ($subcategories as $subcat) {
@@ -375,9 +376,13 @@ class ProductService
         $currentDate = now();
 
         // Buscar campañas activas que incluyan este producto
-        $activeCampaigns = Campaigns::where('is_active', true)
-            ->where('start_date', '<=', $currentDate)
-            ->where('end_date', '>=', $currentDate)
+        $activeCampaigns = Campaigns::where(function ($query) use ($currentDate) {
+            $query->where(function ($q) use ($currentDate) {
+                $q->where('is_active', true)
+                    ->where('start_date', '<=', $currentDate)
+                    ->where('end_date', '>=', $currentDate);
+            })->orWhere('force_active', true);
+        })
             ->whereHas('products', function ($query) use ($product) {
                 $query->where('product_id', $product->id);
             })
@@ -391,9 +396,17 @@ class ProductService
             $campaign = $activeCampaigns->first();
             $campaignProduct = $campaign->products->first();
 
-            // Aplicar descuento personalizado del producto en la campaña o el descuento general de la campaña
-            $discountType = $campaignProduct->pivot->custom_discount_type ?? $campaign->discount_type;
-            $discountValue = (int)($campaignProduct->pivot->custom_discount_value ?? $campaign->discount_value);
+            $customType = $campaignProduct->pivot->custom_discount_type;
+            $customValue = $campaignProduct->pivot->custom_discount_value;
+
+            if (!is_null($customType) && !is_null($customValue)) {
+                $discountType = $customType;
+                $discountValue = (float) $customValue;
+            } else {
+                // Si alguno es null, no aplicar ningún descuento
+                $discountType = null;
+                $discountValue = null;
+            }
 
             if ($discountType && $discountValue) {
 
@@ -410,6 +423,11 @@ class ProductService
                 } else {
                     $product->final_price = max(0, $product->price - $discountValue);
                 }
+            } else {
+                $product->campaign_info = [
+                    'campaign_name' => $campaign->name,
+                    'campaign_slug' => $campaign->slug
+                ];
             }
         }
 
