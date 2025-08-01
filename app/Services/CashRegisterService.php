@@ -157,7 +157,11 @@ class CashRegisterService
         $data['previous_balance'] = $previous_balance;
         $data['current_balance'] = $previous_balance - $data['amount'];
 
-        $data['description'] = 'Transferencia de $' . $data['amount'] . ' a la caja ' . $to->name;
+        $amountFormat = number_format($data['amount'], 2, ',', '.');
+        $amountFormat = rtrim($amountFormat, '0');
+        $amountFormat = rtrim($amountFormat, ',');
+
+        $data['description'] = 'Transferencia de $' . $amountFormat  . ' a la caja ' . $to->name;
 
         $from->balance = $data['current_balance'];
         $from->save();
@@ -174,8 +178,8 @@ class CashRegisterService
 
         $data['previous_balance'] = $previous_balance;
         $data['current_balance'] = $previous_balance + $data['amount'];
-
-        $data['description'] = 'Transferencia recibida de $' . $data['amount'] . ' desde la caja ' . $from->name;
+        
+        $data['description'] = 'Transferencia recibida de $' . $amountFormat  . ' desde la caja ' . $from->name;
 
         $to->balance = $data['current_balance'];
         $to->save();
