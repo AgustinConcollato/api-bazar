@@ -45,7 +45,7 @@ class ShoppingCartController
             $shoppingCart->quantity += $data['quantity'];
             $shoppingCart->save();
             $shoppingCart->load('product');
-        
+
             return response()->json($shoppingCart, 200);
         }
 
@@ -129,7 +129,7 @@ class ShoppingCartController
             $userName = $validated['user_name'];
             $comment = $validated['comment'];
             $address = $validated['address'];
-            $discount = $validated['discount'];
+            $orderDiscount = $validated['discount'];
 
             $cartItems = ShoppingCart::where('client_id', $clientId)->get();
 
@@ -166,8 +166,8 @@ class ShoppingCartController
                 $totalPrice += $checkPrice;
             }
 
-            if ($totalPrice < 150000) {
-                throw new \Exception("Compra minima por la web es de $150.000", 422);
+            if ($totalPrice < 100000) {
+                throw new \Exception("Compra minima por la web es de $100.000", 422);
             }
 
             $order = Order::create([
@@ -177,7 +177,7 @@ class ShoppingCartController
                 'total_amount' => 0,
                 'comment' => $comment,
                 'address' => json_encode($address),
-                'discount' => $discount
+                'discount' => $orderDiscount
             ]);
 
             foreach ($cartItems as $item) {
@@ -258,7 +258,7 @@ class ShoppingCartController
                 $data = [
                     'order_id' => $order->id,
                     'paid_amount' => 0,
-                    'expected_amount' => $expectedAmount,
+                    'expected_amount' => ($order->total_amount - ($order->total_amount * $order->discount) / 100),
                     'method' => $method,
                     'paid_at' => null,
                 ];
