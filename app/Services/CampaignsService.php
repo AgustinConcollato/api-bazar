@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\Storage;
 
 class CampaignsService
 {
+    protected $productService;
+    public function __construct(ProductService $productService)
+    {
+        $this->productService = $productService;
+    }
     public function getCampaigns($status)
     {
         return $status ?
@@ -21,7 +26,7 @@ class CampaignsService
     public function getActiveCampaigns()
     {
         $currentDate = now();
-        
+
         return Campaigns::where('is_active', true)
             ->where('start_date', '<=', $currentDate)
             ->where('end_date', '>=', $currentDate)
@@ -30,36 +35,54 @@ class CampaignsService
 
     public function getCampaignBySlug($slug)
     {
-        return Campaigns::with('products')->where('slug', $slug)->first();
+        $campaign = Campaigns::where('slug', $slug)->first();
+        $products = $campaign->products()
+            ->paginate(20);
+
+        $campaign->setRelation('products', $products);
+        return $campaign;
     }
 
     public function getActiveCampaignBySlug($slug)
     {
         $currentDate = now();
-        
-        // Primero buscar la campaña por slug sin filtros
-        $campaign = Campaigns::with('products')->where('slug', $slug)->first();
-        
+
+        // Buscar campaña sin productos todavía
+        $campaign = Campaigns::where('slug', $slug)->first();
+
         if (!$campaign) {
             throw new \Exception('La campaña no existe');
         }
-        
-        // Verificar si está activa
-        if (!$campaign->is_active) {
+
+        // Verificar estado
+        if (!$campaign->is_active && !$campaign->force_active) {
             throw new \Exception('La campaña no existe');
         }
-        
-        // Verificar fechas
-        if ($currentDate < $campaign->start_date) {
-            throw new \Exception('Esta campaña todavía no ha empezado');
+
+        // Validar fechas si no está forzada
+        if (!$campaign->force_active) {
+            if ($currentDate < $campaign->start_date) {
+                throw new \Exception('Esta campaña todavía no ha empezado');
+            }
+
+            if ($currentDate > $campaign->end_date) {
+                throw new \Exception('Esta campaña ya finalizó');
+            }
         }
-        
-        if ($currentDate > $campaign->end_date) {
-            throw new \Exception('Esta campaña ya finalizó');
-        }
-        
+
+        $products = $campaign->products()
+            ->where('available_quantity', '>', 0)
+            ->paginate(20);
+
+        $products->getCollection()->transform(function ($product) {
+            return $this->productService->applyCampaignDiscounts($product);
+        });
+
+        $campaign->setRelation('products', $products);
+
         return $campaign;
     }
+
 
     public function createCampaign($data, $request)
     {
@@ -86,7 +109,7 @@ class CampaignsService
 
         foreach ($products as $product) {
             $productId = $product['product_id'];
-            
+
             // Verificar si el producto ya está en otra campaña (activa o inactiva)
             // Esto evita conflictos futuros cuando se activen las campañas
             $existingCampaign = Campaigns::where('id', '!=', $campaignId) // Excluir la campaña actual
@@ -122,20 +145,39 @@ class CampaignsService
 
         $startDate = $data['start_date'] ?? $campaign->start_date;
         $endDate = $data['end_date'] ?? $campaign->end_date;
-        $name = $data['name'] ?? null;
         $isActive = isset($data['is_active']) ? $data['is_active'] : $campaign->is_active;
+        $forceActive = isset($data['force_active'])
+            ? filter_var($data['force_active'], FILTER_VALIDATE_BOOLEAN)
+            : $campaign->force_active;
 
-        if ($startDate && $endDate && $endDate <= $startDate) {
-            $validator = Validator::make([], []);
-            $validator->errors()->add('end_date', 'La fecha de finalización debe ser posterior a la fecha de inicio');
-            throw new ValidationException($validator);
+        // Si force_active está activo, anular fechas
+        if ($forceActive) {
+            $startDate = null;
+            $endDate = null;
+            $isActive = '0';
+        } else {
+            // Si force_active está en false y se quiere activar la campaña, validar fechas
+            if ($isActive) {
+                if (empty($startDate) || empty($endDate)) {
+                    $validator = Validator::make([], []);
+                    $validator->errors()->add('start_date', 'Se requiere una fecha de inicio');
+                    $validator->errors()->add('end_date', 'Se requiere una fecha de finalización');
+                    throw new ValidationException($validator);
+                }
+
+                if ($endDate <= $startDate) {
+                    $validator = Validator::make([], []);
+                    $validator->errors()->add('end_date', 'La fecha de finalización debe ser posterior a la fecha de inicio');
+                    throw new ValidationException($validator);
+                }
+            }
         }
 
-        // Si se está activando la campaña, verificar conflictos con otras campañas activas
-        if ($isActive && !$campaign->is_active) {
+        // Verificar conflictos si se activa y no es force_active
+        if ($isActive && !$campaign->is_active && empty($data['force_active'])) {
             $currentDate = now();
             $conflicts = [];
-            
+
             foreach ($campaign->products as $product) {
                 $conflictingCampaign = Campaigns::where('is_active', true)
                     ->where('start_date', '<=', $currentDate)
@@ -145,47 +187,60 @@ class CampaignsService
                         $query->where('product_id', $product->id);
                     })
                     ->first();
-                
+
                 if ($conflictingCampaign) {
                     $conflicts[] = "El producto '{$product->name}' ya está en la campaña activa '{$conflictingCampaign->name}'";
                 }
             }
-            
+
             if (!empty($conflicts)) {
                 throw new \Exception("No se puede activar la campaña. Conflictos encontrados:\n" . implode("\n", $conflicts));
             }
         }
 
-        if ($name) {
-            $data['slug'] = Str::slug($name);
-        }
-
-        // Si se envía una nueva imagen en base64
+        // Procesar imagen base64 (si se incluye)
         if (isset($data['image']) && str_starts_with($data['image'], 'data:image')) {
-            // Eliminar la imagen anterior si existe
             if ($campaign->image) {
                 Storage::disk('public')->delete($campaign->image);
             }
-            
-            // Procesar la imagen base64
+
             $image_parts = explode(";base64,", $data['image']);
             $image_type_aux = explode("image/", $image_parts[0]);
             $image_type = $image_type_aux[1];
             $image_base64 = base64_decode($image_parts[1]);
-            
-            // Generar nombre único para la imagen
+
             $imageName = uniqid() . '.' . $image_type;
             $path = 'images/campaign/' . $imageName;
-            
-            // Guardar la imagen
             Storage::disk('public')->put($path, $image_base64);
+
             $data['image'] = $path;
         }
 
-        $campaign->update($data);
+        // Armar datos actualizados
+        $updateData = [
+            ...$data,
+            'name' => $data['name'] ?? $campaign->name,
+            'slug' => isset($data['name']) ? Str::slug($data['name']) : $campaign->slug,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'is_active' => $isActive,
+        ];
+
+        if (isset($data['force_active'])) {
+            $updateData['force_active'] = $data['force_active'];
+        }
+
+        if (isset($data['image'])) {
+            $updateData['image'] = $data['image'];
+        }
+
+        $campaign->update($updateData);
+
+        $campaign = $this->getCampaignBySlug($campaign->slug);
 
         return $campaign;
     }
+
 
     public function updateProductToCampaign($campaignId, $productId, $data)
     {

@@ -21,11 +21,13 @@ class Campaigns extends Model
         'start_date',
         'end_date',
         'is_active',
+        'force_active',
         'image'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'force_active' => 'boolean'
     ];
 
     public function products()

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\CampaignsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class CampaignController
@@ -42,7 +43,7 @@ class CampaignController
             return response()->json($campaign);
         } catch (\Exception $e) {
             $message = $e->getMessage();
-            
+
             if ($message === 'La campaña no existe') {
                 return response()->json(['error' => $message], 404);
             } elseif ($message === 'Esta campaña todavía no ha empezado' || $message === 'Esta campaña ya finalizó') {
@@ -56,15 +57,31 @@ class CampaignController
     public function create(Request $request)
     {
         try {
-            $validated = $request->validate([
+            $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'discount_type' => 'nullable|string',
                 'discount_value' => 'nullable|numeric',
-                'start_date' => 'required|date',
-                'end_date' => 'required|date|after:start_date',
-                'image'=> 'required|mimes:jpeg,png,jpg,webp,svg|max:2048',
+                'force_active' => 'nullable|boolean',
+                'image' => 'required|mimes:jpeg,png,jpg,webp,svg|max:2048',
+            ], [
+                'start_date.required' => 'La fecha de inicio es obligatoria',
+                'end_date.required' => 'La fecha de finalización es obligatoria',
+                'end_date.after' => 'La fecha de finalización debe ser posterior a la fecha de inicio',
             ]);
+
+            $forceActive = $request->has('force_active') && filter_var($request->input('force_active', false), FILTER_VALIDATE_BOOLEAN);
+
+            if (!$forceActive) {
+                $validator->sometimes('start_date', 'required|date', fn() => true);
+                $validator->sometimes('end_date', 'required|date|after:start_date', fn() => true);
+            }
+
+            if ($validator->fails()) {
+                throw new ValidationException($validator);
+            }
+
+            $validated = $validator->validated();
 
             $campaign = $this->campaignsService->createCampaign($validated, $request);
             return response()->json($campaign);
@@ -130,9 +147,10 @@ class CampaignController
                 'start_date' => 'nullable|date',
                 'end_date' => 'nullable|date|after:start_date',
                 'is_active' => 'nullable|string',
-                'image' => 'nullable|string'
+                'image' => 'nullable|string',
+                'force_active' => 'nullable|string'
             ]);
-
+            
             $campaign = $this->campaignsService->updateCampaign($campaignId, $validated);
             return response()->json($campaign);
         } catch (ValidationException $e) {
