@@ -60,9 +60,7 @@ class ClientController
                     'confirmed',
                     Password::min(8)
                         ->letters()
-                        ->mixedCase()
                         ->numbers()
-                        ->symbols()
                 ],
                 'phone_number' => 'nullable|string|max:20',
             ]);
