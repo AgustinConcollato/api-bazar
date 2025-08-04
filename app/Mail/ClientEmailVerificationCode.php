@@ -11,6 +11,7 @@ class ClientEmailVerificationCode extends Mailable
     use Queueable, SerializesModels;
 
     public $code;
+    public $name;
 
     public function __construct(array $data)
     {

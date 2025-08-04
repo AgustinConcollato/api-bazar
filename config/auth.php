@@ -35,27 +35,27 @@ return [
     |
     */
 
-'guards' => [
-    'web' => [
-        'driver' => 'session',
-        'provider' => 'users',
-    ],
+    'guards' => [
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
 
-    'user' => [
-        'driver' => 'session',
-        'provider' => 'users',
-    ],
+        'user' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
 
-    'client' => [
-        'driver' => 'sanctum',
-        'provider' => 'clients',
-    ],
+        'client' => [
+            'driver' => 'sanctum',
+            'provider' => 'clients',
+        ],
 
-    'sanctum' => [
-        'driver' => 'sanctum',
-        'provider' => 'users', // Para el guard de usuario
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users', // Para el guard de usuario
+        ],
     ],
-],
 
 
     /*
@@ -114,6 +114,13 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+        
+        'clients' => [
+            'provider' => 'clients',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'), // o 'password_resets'
             'expire' => 60,
             'throttle' => 60,
         ],

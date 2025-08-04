@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Mail;
 class ClientService
 {
 
-    public function login($validated)
+    static public function login($validated)
     {
         $client = Client::where('email', $validated['email'])
             ->with('address')
