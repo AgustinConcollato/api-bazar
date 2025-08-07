@@ -12,19 +12,11 @@ use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ShoppingCartController;
 use App\Http\Controllers\ClientAddressController;
 use App\Http\Controllers\PaymentController;
-use App\Mail\ClientResetPassword;
 use App\Http\Middleware\EnsureClient;
 use App\Http\Middleware\EnsureUser;
-use App\Models\Client;
-use App\Services\ClientService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Password;
+
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password as RulesPassword;
-use Illuminate\Validation\ValidationException;
+
 
 Route::post('/register', [UserController::class, 'register']);
 Route::post('/login', [UserController::class, 'login']);
@@ -69,6 +61,9 @@ Route::get('/products/related/{productId}', [ProductController::class, 'relatedP
 
 Route::get('/campaigns/active', [CampaignController::class, 'getActiveCampaign']);
 Route::get('/campaigns/active/{slug}', [CampaignController::class, 'getActiveCampaignBySlug']);
+
+Route::post('/clients/send-email-reset-password', [ClientController::class, 'sendEmailResetPassword']);
+Route::post('/clients/reset-password', [ClientController::class, 'resetPassword']);
 
 //
 //
@@ -163,64 +158,4 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
 
     Route::get('/campaigns', [CampaignController::class, 'get']);
     Route::get('/campaigns/{slug}', [CampaignController::class, 'getBySlug']);
-});
-
-
-Route::get('/send-email-reset-password', function () {
-    $email = 'agustinconcollato@gmail.com';
-
-    $client = Client::where('email', $email)->first();
-
-    if (!$client) {
-        return response()->json(['error' => 'Cliente no encontrado'], 404);
-    }
-
-    $token = Password::broker('clients')->createToken($client);
-
-    Mail::to($email)->send(new ClientResetPassword($token, $email));
-
-    return response()->json(['message' => 'Email enviado con token real']);
-});
-
-Route::post('/clients/reset-password', function (Request $request) {
-    $request->validate([
-        'token' => 'required',
-        'email' => 'required|email',
-        'password' => [
-            'required',
-            'confirmed',
-            RulesPassword::min(8)
-                ->letters()
-                ->numbers()
-        ],
-    ]);
-
-    $status = Password::broker('clients')->reset(
-        $request->only('email', 'password', 'password_confirmation', 'token'),
-        function ($client, $password) {
-            $client->forceFill([
-                'password' => Hash::make($password),
-                'remember_token' => Str::random(60),
-            ])->save();
-        }
-    );
-
-    if ($status === Password::PASSWORD_RESET) {
-        $data = [
-            'email' => $request->input('email'),
-            'password' => $request->input('password'),
-        ];
-
-        try {
-            $clientService =  new ClientService();
-            $response = $clientService->login($data);
-            return response()->json($response, 200);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Error al iniciar sesión', 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    return response()->json([
-        'message' => __($status),
-    ], 422);
 });

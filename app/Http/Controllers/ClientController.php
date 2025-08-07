@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ClientResetPassword;
 use App\Models\Client;
 use App\Services\ClientService;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password as FacadesPassword;
 
 class ClientController
 {
@@ -180,7 +184,6 @@ class ClientController
         }
     }
 
-
     public function updateEmail(Request $request)
     {
         try {
@@ -241,14 +244,81 @@ class ClientController
     public function search($clientName)
     {
         try {
-
             $clients = $this->clientService->search($clientName);
-
             return response()->json($clients);
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Error al buscar clientes', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al buscar clientes', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function sendEmailResetPassword(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'email' => 'required|email',
+            ]);
+
+            $client = Client::where('email', $validated['email'])->first();
+            if (!$client) {
+                return response()->json(['error' => 'Cliente no encontrado'], 404);
+            }
+
+            $token = FacadesPassword::broker('clients')->createToken($client);
+            \Illuminate\Support\Facades\Mail::to($validated['email'])->send(new ClientResetPassword($token, $validated['email']));
+
+            return response()->json(['message' => 'Email enviado con token real']);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al enviar el email de recuperación', 'error' => $e->getMessage()], 500);
+        }
+    }
+    
+    public function resetPassword(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'token' => 'required',
+                'email' => 'required|email',
+                'password' => [
+                    'required',
+                    'confirmed',
+                    Password::min(8)->letters()->numbers(),
+                ],
+            ]);
+
+            $status = FacadesPassword::broker('clients')->reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function ($client, $password) {
+                    $client->forceFill([
+                        'password' => Hash::make($password),
+                        'remember_token' => Str::random(60),
+                    ])->save();
+                }
+            );
+
+            if ($status === FacadesPassword::PASSWORD_RESET) {
+                $data = [
+                    'email' => $request->input('email'),
+                    'password' => $request->input('password'),
+                ];
+                try {
+                    $response = $this->clientService->login($data);
+                    return response()->json($response, 200);
+                } catch (\Exception $e) {
+                    return response()->json(['message' => 'Error al iniciar sesión', 'error' => $e->getMessage()], 500);
+                }
+            }
+
+            return response()->json([
+                'message' => __($status),
+            ], 422);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al restablecer la contraseña', 'error' => $e->getMessage()], 500);
         }
     }
 }
