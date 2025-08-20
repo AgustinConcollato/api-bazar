@@ -21,7 +21,9 @@ class Order extends Model
         'discount',
         'total_amount',
         'address',
-        'client_name'
+        'client_name',
+        'delivery',
+        'surcharge'
     ];
 
 
