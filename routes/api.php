@@ -21,8 +21,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [UserController::class, 'register']);
 Route::post('/login', [UserController::class, 'login']);
 
-Route::get('/products/{id}', [ProductController::class, 'detail']);
-Route::get('/products', [ProductController::class, 'search']);
+Route::get('/products/web', [ProductController::class, 'searchWeb']);
+Route::get('/products/web/{id}', [ProductController::class, 'detailWeb']);
+Route::get('/products/recent', [ProductController::class, 'searchRecent']);
+Route::get('/products/related/{productId}', [ProductController::class, 'relatedProducts']);
 
 Route::get('/categories', [CategoriesController::class, 'categories']);
 Route::get('/categories/{code}', [CategoriesController::class, 'category']);
@@ -39,15 +41,13 @@ Route::get('/order/user/{userId}', [OrderController::class, 'get']);
 
 // rutas Order
 
-Route::post('/cart', [ShoppingCartController::class, 'add']);
 Route::post('/cart/confirm', [ShoppingCartController::class, 'confirm']);
 
-Route::get('/cart/{id}', [ShoppingCartController::class, 'get']);
-Route::get('/cart/detail/{id}', [ShoppingCartController::class, 'getDetail']);
+Route::get('/cart', [ShoppingCartController::class, 'get']);
+Route::get('/cart/detail', [ShoppingCartController::class, 'getDetail']);
 
 Route::put('/cart', [ShoppingCartController::class, 'update']);
 
-Route::delete('/cart/{user}/{id}', [ShoppingCartController::class, 'delete']);
 
 Route::post('/clients/register/panel', [ClientController::class, 'registerPanel']);
 Route::post('/clients/register/web', [ClientController::class, 'registerWeb']);
@@ -56,8 +56,6 @@ Route::post('/clients/login', [ClientController::class, 'login']);
 Route::get('/user/{userId}', [ClientAddressController::class, 'get']);
 Route::post('/user', [ClientAddressController::class, 'add']);
 Route::put('/user/{userId}', [ClientAddressController::class, 'update']);
-
-Route::get('/products/related/{productId}', [ProductController::class, 'relatedProducts']);
 
 Route::get('/campaigns/active', [CampaignController::class, 'getActiveCampaign']);
 Route::get('/campaigns/active/{slug}', [CampaignController::class, 'getActiveCampaignBySlug']);
@@ -87,6 +85,9 @@ Route::middleware(['auth:client', EnsureClient::class])->group(function () {
     Route::get('/order/client', [OrderController::class, 'get']);
 
     Route::put('/clients/update/email', [ClientController::class, 'updateEmail']);
+
+    Route::delete('/cart/{id}', [ShoppingCartController::class, 'delete']);
+    Route::post('/cart', [ShoppingCartController::class, 'add']);
 });
 
 //
@@ -121,6 +122,11 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
 
     Route::delete('/order/product/remove', [OrderController::class, 'remove']);
 
+    Route::put('/order/update-discount', [OrderController::class, 'updateOrderDiscount']);
+
+    Route::get('/products/panel', [ProductController::class, 'searchPanel']);
+    Route::get('/products/{id}', [ProductController::class, 'detail']);
+
     Route::post('/products', [ProductController::class, 'add']);
     Route::post('/products/image-update/{id}', [ProductController::class, 'updateImages']);
     Route::post('/products/image-add/{id}', [ProductController::class, 'addImage']);
@@ -153,8 +159,6 @@ Route::middleware(['auth:sanctum', EnsureUser::class])->group(function () {
     Route::post('/cash-register/deposit', [CashRegisterController::class, 'deposit']);
     Route::post('/cash-register/withdraw', [CashRegisterController::class, 'withdraw']);
     Route::post('/cash-register/transfer-money', [CashRegisterController::class, 'transferMoney']);
-
-    Route::get('/analytics/products/priority', [ProductController::class, 'getProductsByPriority']);
 
     Route::get('/campaigns', [CampaignController::class, 'get']);
     Route::get('/campaigns/{slug}', [CampaignController::class, 'getBySlug']);

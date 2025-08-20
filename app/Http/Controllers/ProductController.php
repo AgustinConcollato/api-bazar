@@ -33,6 +33,7 @@ class ProductController
                 'name' => 'required|string|max:255',
                 'description' => 'string|nullable',
                 'price' => 'required|numeric',
+                'price_final' => 'nullable|numeric|min:0',
                 'discount' => 'integer|nullable',
                 'images' => 'required|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,webp,svg|max:2048',
@@ -57,120 +58,219 @@ class ProductController
         }
     }
 
+    public function detailWeb(Request $request, $id)
+    {
+        $client = $request->user('client');
+        $clientType = $client ? $client->type : 'final';
+
+        $product = $this->productService->detailWeb($id, $clientType);
+
+        return response()->json(['product' => $product, 'client'=> $client]);
+    }
+
     public function detail(Request $request, $id)
     {
         $product = $this->productService->detail($id, $request);
 
-        if (!$product) {
-            return response()->json(Config::get('api-responses.error.not_found'), 404);
-        }
+        $providers = $this->providerService->getProvidersByProduct($id);
 
-        $panel = $request->input('panel', false);
-
-        if ($panel) {
-            $product['sales_velocity'] = $this->productService->calculateSalesVelocity($product);
-            $product->campaign = $this->productService->isProductInCampaign($product);
-        }
+        $product['providers'] = $providers;
 
         return response()->json(array_merge(Config::get('api-responses.success.default'), ['product' => $product]));
     }
-    public function search(Request $request)
+
+    /**
+     * Construye la query base con filtros comunes
+     */
+    private function buildBaseQuery(Request $request, $query)
     {
-        $category = $request->input('category');
-        $subcategory = $request->input('subcategory');
-        $name = $request->input('name');
-        $panel = $request->input('panel');
-        $date = $request->input('date');
-        $views = $request->input('views');
-        $price = $request->input('price');
-        $status = $request->input('status');
-        $discount = $request->input('discount');
-        $availableQuantity = $request->input('available_quantity');
-
-        $query = $panel
-            ? Product::with('providers')
-            : Product::query();
-
-        if ($category) {
-            $query->where('category_code', $category);
+        // Filtros básicos
+        if ($request->input('category')) {
+            $query->where('category_code', $request->input('category'));
         }
 
-        if ($subcategory) {
-            $query->where('subcategory_code', 'like', '%' . $subcategory . '%');
+        if ($request->input('subcategory')) {
+            $query->where('subcategory_code', 'like', '%' . $request->input('subcategory') . '%');
         }
 
-        if ($name) {
-            $query->where(function ($q) use ($name) {
-                $q->whereRaw("MATCH(name) AGAINST(? IN BOOLEAN MODE)", ['"' . $name . '"'])
-                    ->orWhere(function ($q) use ($name) {
-                        $keywords = explode(' ', $name);
-                        foreach ($keywords as $word) {
-                            $q->where('name', 'like', '%' . $word . '%');
-                        }
-                    });
-            });
+        if ($request->input('name')) {
+            $this->applyNameFilter($query, $request->input('name'));
         }
 
-        if (!$panel) {
-            $query->where('status', 'active');
+        // Filtros adicionales
+        if ($request->input('available_quantity')) {
+            $query->where('available_quantity', '>', 0);
         }
 
-        if ($availableQuantity) {
-            $query->where('available_quantity', '>',  0);
-        }
-
-        if ($discount) {
+        if ($request->input('discount')) {
             $query->where('discount', '>', 0);
         }
 
-        if ($status) {
-            $query->where('status', $status);
-        }
+        return $query;
+    }
 
-        if ($date) {
-            // buscar los productos que se crearon en los ultimos 30 dias
-            $products = $query->where('created_at', '>=', now()->subDays(10))
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+    /**
+     * Aplica filtro de búsqueda por nombre
+     */
+    private function applyNameFilter($query, $name)
+    {
+        $query->where(function ($q) use ($name) {
+            $q->whereRaw("MATCH(name) AGAINST(? IN BOOLEAN MODE)", ['"' . $name . '"'])
+                ->orWhere(function ($q) use ($name) {
+                    $keywords = explode(' ', $name);
+                    foreach ($keywords as $word) {
+                        $q->where('name', 'like', '%' . $word . '%');
+                    }
+                });
+        });
+    }
 
-            // Aplicar descuentos de campañas activas
-            $products->getCollection()->transform(function ($product) {
-                return $this->productService->applyCampaignDiscounts($product);
-            });
-
-            return response()->json($products);
-        }
-
-        if ($views) {
+    /**
+     * Aplica ordenamiento a la query
+     */
+    private function applyOrdering($query, Request $request)
+    {
+        if ($request->input('views')) {
             $query->orderBy('views', 'desc');
-        } else if ($price === 'min') {
+        } elseif ($request->input('price') === 'min') {
             $query->orderBy('price', 'asc');
-        } else if ($price === 'max') {
+        } elseif ($request->input('price') === 'max') {
             $query->orderBy('price', 'desc');
         } else {
             $query->orderBy('name');
         }
+    }
 
-        $products = $query->paginate(20);
-
-        // Aplicar descuentos de campañas activas
+    /**
+     * Aplica información de campañas a los productos
+     */
+    private function applyCampaignInfo($products)
+    {
         foreach ($products as $product) {
             $campaignInfo = $this->productService->isProductInCampaign($product);
 
-            if ($panel) {
+            // Si tiene providers cargados, es panel (admin)
+            if ($product->relationLoaded('providers')) {
                 $product->in_campaign = $campaignInfo["in_campaign"];
             }
 
             $this->productService->applyCampaignDiscounts($product);
         }
+    }
+
+    /**
+     * Búsqueda específica para productos recientes
+     */
+    public function searchRecent(Request $request)
+    {
+        $client = $request->user('client');
+
+        $query = Product::query();
+
+        // Construir query base
+        $query = $this->buildBaseQuery($request, $query);
+
+        // Solo productos activos para web
+        $query->where('status', 'active');
+
+        $products = $query->where('created_at', '>=', now()->subDays(10))
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        // Aplicar descuentos de campañas activas
+        $products->getCollection()->transform(function ($product) {
+            return $this->productService->applyCampaignDiscounts($product);
+        });
+
+        $clientType = $client ? $client->type : 'final';
+
+        $products->transform(function ($product) use ($clientType) {
+            $product->price = $product->getPriceForClient($clientType);
+            unset($product->price_final); // opcional: ocultar del JSON
+            return $product;
+        });
 
         return response()->json($products);
     }
 
-    public function relatedProducts($productId)
+    /**
+     * Búsqueda específica para el panel de control
+     */
+    public function searchPanel(Request $request)
+    {
+        $query = Product::with('providers');
+
+        // Filtros de estado
+        if ($request->input('status')) {
+            $query->where('status', $request->input('status'));
+        } else {
+            $query->where('status', 'active');
+        }
+
+        // Construir query base
+        $query = $this->buildBaseQuery($request, $query);
+
+        // Aplicar ordenamiento
+        $this->applyOrdering($query, $request);
+
+        $products = $query->paginate(20);
+
+        // Aplicar información de campañas
+        $this->applyCampaignInfo($products);
+
+        return response()->json($products);
+    }
+
+    /**
+     * Búsqueda específica para la web (clientes)
+     */
+    public function searchWeb(Request $request)
+    {
+        $client = $request->user('client');
+
+        $query = Product::query();
+
+        // Construir query base
+        $query = $this->buildBaseQuery($request, $query);
+
+        // Solo productos activos para web
+        $query->where('status', 'active');
+
+        // Aplicar ordenamiento
+        $this->applyOrdering($query, $request);
+
+        $products = $query->paginate(20);
+
+        // Aplicar descuentos de campañas activas
+        $this->applyCampaignInfo($products);
+
+        $clientType = $client ? $client->type : 'final';
+
+        $products->getCollection()->transform(function ($product) use ($clientType) {
+            $product->price = $product->getPriceForClient($clientType);
+            unset($product->price_final); // opcional: ocultar del JSON
+            return $product;
+        });
+
+        return response()->json($products);
+    }
+
+    public function relatedProducts(Request $request, $productId)
     {
         try {
+
+            $client = $request->user('client');
+
             $products = $this->productService->relatedProducts($productId);
+
+            $clientType = $client ? $client->type : 'final';
+
+            $products->transform(function ($product) use ($clientType) {
+                $product->price = $product->getPriceForClient($clientType);
+                unset($product->price_final); // opcional: ocultar del JSON
+                return $product;
+            });
+
             return response()->json($products);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al obtener productos relacionados', 'error' => $e->getMessage()]);
@@ -185,6 +285,7 @@ class ProductController
                 'name' => 'nullable|string',
                 'purchase_price' => 'nullable|numeric',
                 'price' => 'nullable|numeric',
+                'price_final' => 'nullable|numeric|min:0',
                 'status' => 'nullable|string',
                 'available_quantity' => 'nullable|integer',
                 'category_code' => 'nullable|string',
@@ -278,22 +379,5 @@ class ProductController
         $product->delete();
 
         return response()->json(Config::get('api-responses.success.deleted'));
-    }
-
-    public function getProductsByPriority()
-    {
-        try {
-            $products = $this->productService->getProductsBySalesVelocity();
-
-            return response()->json([
-                'message' => 'Lista de productos ordenados por prioridad de reposición',
-                'data' => $products
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error al obtener la lista de productos',
-                'error' => $e->getMessage()
-            ], 500);
-        }
     }
 }

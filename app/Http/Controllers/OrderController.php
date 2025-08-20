@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderProducts;
 use App\Models\Product;
@@ -68,17 +69,24 @@ class OrderController
         }
     }
 
-    public function detail($id)
+    public function detail(Request $request, $id)
     {
-        $order = Order::with('products')->find($id);
-
-        if (!$order) {
-            return response()->json(Config::get('api-responses.error.not_found'), 404);
-        }
+        $order = Order::with('products')->findOrFail($id);
 
         $payments = $order->payments;
-
         $order['payments'] = $payments;
+
+        $client = Client::find($order->client_id);
+        // Obtener el tipo de cliente
+        $clientType = $client ? $client->type : 'final';
+
+        // Recalcular el precio de cada producto según el tipo de cliente
+        foreach ($order->products as $orderProduct) {
+            $product = Product::find($orderProduct->product_id);
+            if ($product) {
+                $orderProduct->price = $product->getPriceForClient($clientType);
+            }
+        }
 
         return response()->json($order);
     }
@@ -262,5 +270,28 @@ class OrderController
         }
 
         return response()->json($product);
+    }
+
+    public function updateOrderDiscount(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'order_id' => 'required|string|exists:orders,id',
+                'discount' => 'required|numeric|min:0|max:100'
+            ]);
+
+            $result = $this->orderService->updateOrderDiscount($validated);
+
+            return response()->json([
+                'message' => 'Descuento del pedido actualizado correctamente',
+                'order' => $result['order'],
+                'total_with_discount' => $result['total_with_discount']
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error al actualizar el descuento del pedido', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar el descuento del pedido', 'error' => $e->getMessage()], 500);
+        }
     }
 }

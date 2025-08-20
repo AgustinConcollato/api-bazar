@@ -236,11 +236,7 @@ class ProductService
 
     public function update($validated, $id)
     {
-        $product = Product::find($id);
-
-        if (!$product) {
-            throw new \Exception(Config::get('api-responses.error.not_found'));
-        }
+        $product = Product::findOrFail($id);
 
         if (!empty($validated['category_code']) && $validated['category_code'] !== $product->category_code) {
             $newCategoryCode = $validated['category_code'];
@@ -274,9 +270,11 @@ class ProductService
             $validated['subcategory_code'] = null;
         }
 
-        $product->update($validated);
+        if (isset($validated['price'])) {
+            $validated['price_final'] = $validated['price'] * 1.10;
+        }
 
-        $product['sales_velocity'] = $this->calculateSalesVelocity($product);
+        $product->update($validated);
 
         return $product;
     }
@@ -343,27 +341,35 @@ class ProductService
         imagedestroy($thumbnail);
     }
 
-    public function detail($id, $request)
+    public function detailWeb($id, $clientType)
     {
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
 
-        if (!$product) {
-            throw new \Exception(Config::get('api-responses.error.not_found'));
-        }
+        $productClone = clone $product;
 
-        $panel = $request->input('panel', false);
+        $productClone->price = $productClone->getPriceForClient($clientType);
+        unset($productClone->price_final);
 
-        if ($panel) {
-            $providers = $this->providerService->getProvidersByProduct($id);
+        $product->views += 1;
+        $product->save();
 
-            $product['providers'] = $providers;
-        } else {
-            $product->views += 1;
-            $product->save();
-        }
+        // Aplicar descuentos de campañas activas
+        $productClone = $this->applyCampaignDiscounts($productClone);
+        $productClone->campaign = $this->isProductInCampaign($productClone);
+
+        return $productClone;
+    }
+
+    public function detail($id)
+    {
+        $product = Product::findOrFail($id);
+
+        $product->views += 1;
+        $product->save();
 
         // Aplicar descuentos de campañas activas
         $product = $this->applyCampaignDiscounts($product);
+        $product->campaign = $this->isProductInCampaign($product);
 
         return $product;
     }
@@ -462,180 +468,5 @@ class ProductService
             'in_campaign' => false,
             'campaign' => null
         ];
-    }
-
-    // /**
-    //  * Determina el estado de una campaña
-    //  */
-    // private function getCampaignStatus($campaign)
-    // {
-    //     $currentDate = now();
-
-    //     if (!$campaign->is_active) {
-    //         return 'inactive';
-    //     }
-
-    //     if ($currentDate < $campaign->start_date) {
-    //         return 'not_started';
-    //     }
-
-    //     if ($currentDate > $campaign->end_date) {
-    //         return 'expired';
-    //     }
-
-    //     return 'active';
-    // }
-
-    public function calculateSalesVelocity($product)
-    {
-        // Usar la relación eager loaded para calcular las ventas
-        $recentSales = $product->orderProducts ?? collect();
-
-        // Filtrar solo las ventas completadas
-        $recentSales = $recentSales->filter(function ($orderProduct) {
-            return $orderProduct->order->status === 'completed';
-        });
-
-        $lastWeekSales = $recentSales->filter(function ($orderProduct) {
-            return $orderProduct->order->updated_at >= now()->subDays(7);
-        });
-
-        $totalQuantitySold = $recentSales->sum('quantity');
-        $lastWeekQuantitySold = $lastWeekSales->sum('quantity');
-        $weeksAnalyzed = 4; // 30 días ≈ 4 semanas
-        $velocityPerWeek = $totalQuantitySold / $weeksAnalyzed;
-
-        // Calcular semanas estimadas para agotar stock actual
-        $weeksUntilStockout = $product->available_quantity > 0 && $velocityPerWeek > 0
-            ? ceil($product->available_quantity / $velocityPerWeek)
-            : null;
-
-        return [
-            'total_sold_last_30_days' => $totalQuantitySold, // ventas de los últimos 30 días
-            'total_sold_last_week' => $lastWeekQuantitySold, // ventas de la última semana
-            'velocity_per_week' => round($velocityPerWeek, 2), // velocidad de ventas por semana
-            'weeks_until_stockout' => $weeksUntilStockout, // semanas para agotar stock
-            'status' => $this->getStockStatus($weeksUntilStockout, $velocityPerWeek)
-        ];
-    }
-
-    private function getStockStatus($weeksUntilStockout, $velocityPerWeek)
-    {
-        if ($weeksUntilStockout === null) {
-            return 'sin_ventas';
-        }
-
-        if ($weeksUntilStockout <= 1) { // 1 semana o menos
-            return 'stock_critico';
-        } elseif ($weeksUntilStockout <= 2) { // 1-2 semanas
-            return 'stock_bajo';
-        } elseif ($weeksUntilStockout <= 4) { // 2-4 semanas
-            return 'stock_medio';
-        } else { // más de 4 semanas
-            return 'stock_suficiente';
-        }
-    }
-
-    public function getProductsBySalesVelocity()
-    {
-        // Obtener productos activos con solo los campos necesarios de sus ventas
-        $products = Product::where('status', 'active')
-            ->with(['orderProducts' => function ($query) {
-                $query->select('product_id', 'quantity', 'order_id')
-                    ->whereHas('order', function ($q) {
-                        $q->where('updated_at', '>=', now()->subDays(30));
-                    })
-                    ->with(['order' => function ($q) {
-                        $q->select('id', 'client_id', 'client_name', 'updated_at', 'status');
-                    }]);
-            }])
-            ->select([
-                'id',
-                'name',
-                'available_quantity',
-                'price',
-                'thumbnails',
-                'discount'
-            ])
-            ->get();
-
-        $productsWithVelocity = [];
-
-        foreach ($products as $product) {
-            $velocity = $this->calculateSalesVelocity($product);
-
-            // Solo incluir productos que tienen ventas
-            if ($velocity['total_sold_last_30_days'] > 2) {
-                // Transformar order_products en orders con la información combinada
-                if ($product->orderProducts) {
-                    $product->orders = $product->orderProducts->map(function ($orderProduct) use ($product) {
-                        return [
-                            'quantity' => $orderProduct->quantity,
-                            'id' => $orderProduct->order_id,
-                            'client_id' => $orderProduct->order->client_id,
-                            'client_name' => $orderProduct->order->client_name,
-                            'updated_at' => $orderProduct->order->updated_at
-                        ];
-                    });
-                } else {
-                    $product->orders = [];
-                }
-
-                unset($product->orderProducts);
-
-                $product->sales_velocity = $velocity;
-                $product->priority_score = $this->calculatePriorityScore($velocity, $product);
-                $productsWithVelocity[] = $product;
-            }
-        }
-
-        // Ordenar por prioridad (primero los que necesitan reposición más urgente)
-        usort($productsWithVelocity, function ($a, $b) {
-            return $b->priority_score <=> $a->priority_score;
-        });
-
-        // Aplicar descuentos de campañas activas
-        foreach ($productsWithVelocity as $product) {
-            $this->applyCampaignDiscounts($product);
-        }
-
-        // Limitar a los 20 productos más prioritarios
-        return array_slice($productsWithVelocity, 0, 20);
-    }
-
-    private function calculatePriorityScore($velocity, $product)
-    {
-        $score = 0;
-
-        // Prioridad por estado de stock
-        switch ($velocity['status']) {
-            case 'stock_critico':
-                $score += 100;
-                break;
-            case 'stock_bajo':
-                $score += 75;
-                break;
-            case 'stock_medio':
-                $score += 50;
-                break;
-            case 'stock_suficiente':
-                $score += 25;
-                break;
-        }
-
-        // Prioridad por velocidad de venta (más ventas = más prioridad)
-        $score += min($velocity['velocity_per_week'] * 10, 50);
-
-        // Prioridad por ratio de stock/ventas semanales
-        if ($velocity['velocity_per_week'] > 0) {
-            $stockToSalesRatio = $product->available_quantity / $velocity['velocity_per_week'];
-            if ($stockToSalesRatio < 1) {
-                $score += 50; // Stock menor a una semana de ventas
-            } elseif ($stockToSalesRatio < 2) {
-                $score += 25; // Stock menor a dos semanas de ventas
-            }
-        }
-
-        return $score;
     }
 }

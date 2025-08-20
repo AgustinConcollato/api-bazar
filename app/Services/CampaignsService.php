@@ -43,7 +43,7 @@ class CampaignsService
         return $campaign;
     }
 
-    public function getActiveCampaignBySlug($slug)
+    public function getActiveCampaignBySlug($slug, $client)
     {
         $currentDate = now();
 
@@ -74,8 +74,16 @@ class CampaignsService
             ->where('available_quantity', '>', 0)
             ->paginate(20);
 
-        $products->getCollection()->transform(function ($product) {
-            return $this->productService->applyCampaignDiscounts($product);
+        $clientType = $client ? $client->type : 'final';
+
+        $products->getCollection()->transform(function ($product) use ($clientType) {
+            $productClone = clone $product;
+
+            $productClone = $this->productService->applyCampaignDiscounts($productClone);
+            $productClone->price = $productClone->getPriceForClient($clientType);
+            unset($productClone->price_final);
+
+            return $productClone;
         });
 
         $campaign->setRelation('products', $products);

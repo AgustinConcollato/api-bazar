@@ -36,10 +36,12 @@ class CampaignController
         return response()->json($campaign);
     }
 
-    public function getActiveCampaignBySlug($slug)
+    public function getActiveCampaignBySlug(Request $request, $slug)
     {
         try {
-            $campaign = $this->campaignsService->getActiveCampaignBySlug($slug);
+            $client = $request->user('client');
+
+            $campaign = $this->campaignsService->getActiveCampaignBySlug($slug,  $client);
             return response()->json($campaign);
         } catch (\Exception $e) {
             $message = $e->getMessage();
@@ -150,7 +152,7 @@ class CampaignController
                 'image' => 'nullable|string',
                 'force_active' => 'nullable|string'
             ]);
-            
+
             $campaign = $this->campaignsService->updateCampaign($campaignId, $validated);
             return response()->json($campaign);
         } catch (ValidationException $e) {

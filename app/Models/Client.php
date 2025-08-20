@@ -22,6 +22,7 @@ class Client extends Authenticatable
         'password',
         'phone_number',
         'source',
+        'type',
         'email_verified_at',
         'email_verification_code',
         'email_verification_expires_at',
@@ -38,7 +39,44 @@ class Client extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'email_verification_expires_at' => 'datetime',
+        'type' => 'string',
     ];
+
+    // Constantes para tipos de cliente
+    const TYPE_FINAL = 'final';
+    const TYPE_RESELLER = 'reseller';
+
+    // Métodos para verificar tipo de cliente
+    public function isFinalConsumer(): bool
+    {
+        return $this->client_type === self::TYPE_FINAL;
+    }
+
+    public function isReseller(): bool
+    {
+        return $this->client_type === self::TYPE_RESELLER;
+    }
+
+    // Método para obtener etiqueta legible del tipo
+    public function getClientTypeLabel(): string
+    {
+        return match($this->client_type) {
+            self::TYPE_FINAL => 'Consumidor Final',
+            self::TYPE_RESELLER => 'Revendedor',
+            default => 'Desconocido'
+        };
+    }
+
+    // Método para cambiar tipo de cliente
+    public function setClientType(string $type): bool
+    {
+        if (in_array($type, [self::TYPE_FINAL, self::TYPE_RESELLER])) {
+            $this->update(['client_type' => $type]);
+            return true;
+        }
+        return false;
+    }
+
     protected static function boot()
     {
         parent::boot();

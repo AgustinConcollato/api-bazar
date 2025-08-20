@@ -66,7 +66,8 @@ class ClientController
                         ->letters()
                         ->numbers()
                 ],
-                'phone_number' => 'nullable|string|max:20',
+                'phone_number' => 'required|string|max:20',
+                'type' => 'required|string|in:final,reseller',
             ]);
 
             $validated['source'] = 'web';
@@ -94,9 +95,11 @@ class ClientController
                 ],
                 'phone_number' => 'nullable|string|max:20',
                 'email' => 'nullable|email',
+                'type' => 'nullable|string|in:final,reseller',
             ]);
 
             $validated['source'] = 'dashboard';
+            $validated['type'] = $validated['type'] ?? 'reseller';
 
             $client = $this->clientService->register($validated);
 
@@ -229,6 +232,7 @@ class ClientController
                     'email',
                     Rule::unique('clients')->ignore($client->id)
                 ],
+                'client_type' => 'nullable|string|in:final,reseller',
             ], $messages);
 
             $client = $this->clientService->update($client, $validated);
@@ -275,7 +279,7 @@ class ClientController
             return response()->json(['message' => 'Error al enviar el email de recuperación', 'error' => $e->getMessage()], 500);
         }
     }
-    
+
     public function resetPassword(Request $request)
     {
         try {
