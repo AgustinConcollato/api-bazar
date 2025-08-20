@@ -105,4 +105,31 @@ class OrderService
 
         return $orders;
     }
+
+    public function updateOrderDiscount($validated)
+    {
+        $order = Order::findOrFail($validated['order_id']);
+        
+        // Actualizar el descuento del pedido
+        $order->update(['discount' => $validated['discount']]);
+
+        // Recalcular el total con descuento aplicado
+        $totalWithoutDiscount = $order->total_amount;
+        $discount = $validated['discount'];
+        $totalWithDiscount = $discount > 0 ? $totalWithoutDiscount - ($discount * $totalWithoutDiscount) / 100 : $totalWithoutDiscount;
+
+        // Actualizar expected_amount del pago asociado
+        $payment = $order->payments()->first();
+        if ($payment) {
+            $payment->update(['expected_amount' => $totalWithDiscount]);
+        }
+
+        // Retornar el pedido actualizado
+        $order = Order::with('products')->find($order->id);
+        
+        return [
+            'order' => $order,
+            'total_with_discount' => $totalWithDiscount
+        ];
+    }
 }
