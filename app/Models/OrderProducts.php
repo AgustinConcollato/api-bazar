@@ -22,6 +22,10 @@ class OrderProducts extends Model
         'subtotal',
     ];
 
+    protected $hidden = [
+        'purchase_price'
+    ];
+
     public function order()
     {
         return $this->belongsTo(Order::class, 'order_id', 'id');
