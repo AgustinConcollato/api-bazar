@@ -220,6 +220,7 @@ class ShoppingCartService
                 'expected_amount' => ($order->total_amount - ($order->total_amount * $order->discount) / 100),
                 'method' => $method,
                 'paid_at' => null,
+                'shopping_cart' => true
             ];
 
             $payment = $this->paymentService->createPayment($data);

@@ -48,24 +48,26 @@ class ClientService
     public function get($id = null, $source)
     {
         if ($id) {
-            $client = Client::where(['id' => $id])
-                ->with('address')
-                ->with('orders.payments')
-                ->with('payments', function ($query) {
-                    $query->whereColumn('paid_amount', '<', 'expected_amount');
-                })
-                ->first();
+            $client = Client::with('address')
+                ->find($id);
+
+            $client->debt = $client->totalDebt(); // Agrega el campo 'debt' al objeto
+            unset($client->orders);
+
             return $client;
         }
 
         if ($source) {
-            $clients = Client::where('source', $source)->with('address')
-                ->with('payments', function ($query) {
-                    $query->whereColumn('paid_amount', '<', 'expected_amount');
-                })
+            $clients = Client::where('source', $source)
+                ->with('address')
                 ->get();
         } else {
             $clients = Client::with('address')->get();
+        }
+
+        foreach ($clients as $client) {
+            $client->debt = $client->totalDebt(); // Agrega el campo 'debt' al objeto
+            unset($client->orders);
         }
 
         return $clients;

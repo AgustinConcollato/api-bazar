@@ -98,6 +98,7 @@ class OrderController
                 'name' => 'required|string',
                 'purchase_price' => 'numeric|nullable',
                 'price' => 'required|numeric',
+                'price_final' => 'required|numeric',
                 'order_id' => 'required|string',
                 'product_id' => 'required|string',
                 'picture' => 'nullable|string',

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderProducts;
+use App\Models\Product;
 
 class OrderService
 {
@@ -37,7 +38,24 @@ class OrderService
 
     public function add($validated)
     {
-        $price = $validated['price'];
+        $orderId = $validated['order_id'];
+
+        $productInOrder = OrderProducts::where('order_id', $orderId)
+            ->where('product_id', $validated['product_id'])
+            ->first();
+
+        if ($productInOrder) {
+            throw new \Exception("El producto ya esta en la lista", 400);
+        }
+
+        $order = Order::findOrFail($orderId);
+
+        $client = Client::findOrFail($order->client_id);
+
+        $price = 0;
+
+        $price = $client->type === 'final' ? $validated['price_final'] : $validated['price'];
+
         $quantity = $validated['quantity'];
         $discount = $validated['discount'];
 
@@ -46,14 +64,6 @@ class OrderService
             $price * $quantity;
 
         $validated['subtotal'] = $subtotal;
-
-        $productInOrder = OrderProducts::where('order_id', $validated['order_id'])
-            ->where('product_id', $validated['product_id'])
-            ->first();
-
-        if ($productInOrder) {
-            throw new \Exception("El producto ya esta en la lista", 400);
-        }
 
         $product = OrderProducts::create($validated);
 
@@ -69,6 +79,12 @@ class OrderService
                 $totalWithDiscount = $discount ? $totalWithoutDiscount - ($discount * $totalWithoutDiscount) / 100 : $totalWithoutDiscount;
                 $payment->update(['expected_amount' => $totalWithDiscount]);
             }
+
+            $p = Product::find($product->product_id);
+
+            $priceFinal = $p->getPriceForClient($client->type);
+
+            $product['price'] = $priceFinal;
 
             return $product;
         }
@@ -109,7 +125,7 @@ class OrderService
     public function updateOrderDiscount($validated)
     {
         $order = Order::findOrFail($validated['order_id']);
-        
+
         // Actualizar el descuento del pedido
         $order->update(['discount' => $validated['discount']]);
 
@@ -126,7 +142,7 @@ class OrderService
 
         // Retornar el pedido actualizado
         $order = Order::with('products')->find($order->id);
-        
+
         return [
             'order' => $order,
             'total_with_discount' => $totalWithDiscount

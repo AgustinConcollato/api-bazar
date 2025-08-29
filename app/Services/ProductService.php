@@ -271,7 +271,7 @@ class ProductService
         }
 
         if (isset($validated['price'])) {
-            $validated['price_final'] = $validated['price'] * 1.10;
+            $validated['price_final'] = $validated['price'] * 1.15;
         }
 
         $product->update($validated);

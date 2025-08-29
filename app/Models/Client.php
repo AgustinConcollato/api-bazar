@@ -60,7 +60,7 @@ class Client extends Authenticatable
     // Método para obtener etiqueta legible del tipo
     public function getClientTypeLabel(): string
     {
-        return match($this->client_type) {
+        return match ($this->client_type) {
             self::TYPE_FINAL => 'Consumidor Final',
             self::TYPE_RESELLER => 'Revendedor',
             default => 'Desconocido'
@@ -96,6 +96,13 @@ class Client extends Authenticatable
     public function address()
     {
         return $this->hasMany(ClientAddress::class, 'client_id', 'id');
+    }
+
+    public function totalDebt(): float
+    {
+        return $this->orders->sum(function ($order) {
+            return $order->remainingAmount();
+        });
     }
 
     public function payments()

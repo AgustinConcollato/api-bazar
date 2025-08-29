@@ -55,21 +55,10 @@ class Order extends Model
         return $this->hasMany(Payment::class, 'order_id', 'id');
     }
 
-    // Total pagado hasta el momento
-    public function totalPaid(): float
-    {
-        return $this->payments->sum('amount');
-    }
-
     // Cuánto falta pagar
     public function remainingAmount(): float
     {
-        return max(0, $this->total_amount - $this->totalPaid());
-    }
-
-    // Ya está totalmente pagado
-    public function isPaid(): bool
-    {
-        return $this->totalPaid() >= $this->total_amount;
+        $totalPaid = $this->payments->sum('paid_amount');
+        return max(0, $this->total_amount - $totalPaid);
     }
 }
