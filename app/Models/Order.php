@@ -58,6 +58,9 @@ class Order extends Model
     // Cuánto falta pagar
     public function remainingAmount(): float
     {
+        if ($this->created_at < '2025-06-11') {
+            return 0;
+        }
         $totalPaid = $this->payments->sum('paid_amount');
         return max(0, $this->total_amount - $totalPaid);
     }
