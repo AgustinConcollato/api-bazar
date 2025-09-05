@@ -88,6 +88,8 @@ Route::middleware(['auth:client', EnsureClient::class])->group(function () {
 
     Route::delete('/cart/{id}', [ShoppingCartController::class, 'delete']);
     Route::post('/cart', [ShoppingCartController::class, 'add']);
+
+    Route::post('/clients/request-change-account-type', [ClientController::class, 'requestChangeAccountType']);
 });
 
 //

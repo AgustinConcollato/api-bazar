@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\ClientAccountChange;
 use App\Mail\ClientEmailVerificationCode;
 use App\Models\Client;
 use ErrorException;
@@ -151,5 +152,18 @@ class ClientService
         $clients = Client::where('name', 'like', '%' . $clientName . '%')->paginate(20);
 
         return $clients;
+    }
+
+    public function handleAccountTypeChangeRequest($client, $validated)
+    {
+        $data = [
+            'type' => $validated['requested_type'],
+            'name' => $client->name,
+            'id' => $client->id,
+            'email' => $client->email,
+            'reason' => $validated['reason'] ?? 'No especificado',
+        ];
+
+        Mail::to('bazarshopmayorista@gmail.com')->send(new ClientAccountChange($data));
     }
 }

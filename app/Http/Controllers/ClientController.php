@@ -86,7 +86,7 @@ class ClientController
     {
         try {
 
-            $validated =  $request->validate([
+            $validated = $request->validate([
                 'name' => 'required|string|max:100',
                 'password' => [
                     'required',
@@ -323,6 +323,29 @@ class ClientController
             return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al restablecer la contraseña', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function requestChangeAccountType(Request $request)
+    {
+        try {
+            $client = $request->user('client');
+            $validated = $request->validate([
+                'requested_type' => 'required|string|in:final,reseller',
+                'reason' => 'nullable|string|max:500',
+            ]);
+
+            if ($client->type === $validated['requested_type']) {
+                return response()->json(['message' => 'El tipo de cuenta solicitado es el mismo que el actual'], 400);
+            }
+
+            $this->clientService->handleAccountTypeChangeRequest($client, $validated);
+
+            return response()->json(['message' => 'Solicitud de cambio de tipo de cuenta enviada con éxito'], 200);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Error de validación', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al procesar la solicitud', 'error' => $e->getMessage()], 500);
         }
     }
 }
