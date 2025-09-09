@@ -82,7 +82,11 @@ class OrderService
 
             $p = Product::find($product->product_id);
 
-            $priceFinal = $p->getPriceForClient($client->type);
+            if (!$p) {
+                $priceFinal = $client->type === 'final' ? $validated['price_final'] : $validated['price'];
+            } else {
+                $priceFinal = $p->getPriceForClient($client->type);
+            }
 
             $product['price'] = $priceFinal;
 
