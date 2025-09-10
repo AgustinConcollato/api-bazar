@@ -71,7 +71,7 @@ class OrderController
 
     public function detail(Request $request, $id)
     {
-        $order = Order::with('products')->findOrFail($id);
+        $order = Order::findOrFail($id);
 
         $payments = $order->payments;
         $order['payments'] = $payments;
@@ -84,7 +84,9 @@ class OrderController
         foreach ($order->products as $orderProduct) {
             $product = Product::find($orderProduct->product_id);
             if ($product) {
-                $orderProduct->price = $product->getPriceForClient($clientType);
+                if ($orderProduct->price == $product->getPriceForClient($clientType)) {
+                    $orderProduct->price = $product->getPriceForClient($clientType);
+                }
             }
         }
 
