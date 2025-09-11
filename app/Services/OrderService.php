@@ -96,7 +96,9 @@ class OrderService
 
     public function get($validated)
     {
-        $query = Order::query()->with('payments');
+        $query = Order::query()
+            ->with('payments')
+            ->with('products');
 
         // Si se especificó un estado (status), aplicarlo
         if (!empty($validated['status'])) {
