@@ -61,7 +61,14 @@ class Order extends Model
         if ($this->created_at < '2025-06-11') {
             return 0;
         }
+
+        $finalAmount = $this->total_amount;
+
+        if ($this->discount > 0) {
+            $finalAmount = $this->total_amount * (1 - $this->discount / 100);
+        }
+
         $totalPaid = $this->payments->sum('paid_amount');
-        return max(0, $this->total_amount - $totalPaid);
+        return max(0, $finalAmount - $totalPaid);
     }
 }
