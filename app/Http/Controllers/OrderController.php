@@ -213,7 +213,7 @@ class OrderController
         $order = Order::with('products')->find($id);
 
         $data = [
-            'client' => ['name' => $order->client_name, 'id' => $order->client],
+            'client' => ['name' => $order->client_name, 'id' => $order->client_id],
             'code' => $order->id,
             'date' => $order->updated_at->format('d/m/Y'),
             'products' => $order->products,
